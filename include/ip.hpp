@@ -16,6 +16,38 @@
 #ifndef ___MIRACLEFOREST_MEET_IP___
 #define ___MIRACLEFOREST_MEET_IP___
 
+#include <string>
+#include <WinSock2.h>
 
+namespace meet
+{
+	enum class Family
+	{
+		IPV4 = 0,
+		IPV6 = 1
+	};
+
+	class IP
+	{
+		IP(hostent* _host)
+		{
+			host = _host;
+		};
+
+	private:
+		hostent* host;
+	public:
+		auto GetHost()->hostent*;
+	public:
+
+		//从主机名中获取IP主机信息
+		static auto gethostbyname(std::string hostname)->hostent*
+		{
+			return gethostbyname(hostname.c_str());
+		};
+	};
+
+}
 
 #endif //!___MIRACLEFOREST_MEET_IP___
+

@@ -16,6 +16,62 @@
 #ifndef ___MIRACLEFOREST_MEET_TCPCLIENT___
 #define ___MIRACLEFOREST_MEET_TCPCLIENT___
 
+#include <string>
+#include "ip.hpp"
 
+namespace meet
+{
+
+	class TCPClient
+	{
+		TCPClient(Family f = Family::IPV4)
+		{
+			memset(&sock, 0, sizeof(sock));
+			family = f;
+			if (f == Family::IPV4)
+			{
+				sock.sin_family = AF_INET;
+			}
+			else if (f == Family::IPV6)
+			{
+				//暂不支持
+				sock.sin_family = AF_INET6;
+			}
+		}
+
+	private:
+		int sockfd;
+		sockaddr_in sock;
+		bool connected = false;
+		Family family;
+
+	public:
+
+		//初始化客户端  初始化前先注册好各种监听函数
+		auto Init() -> bool
+		{
+			if ((sockfd = socket(sock.sin_family, SOCK_STREAM, 0)) == -1)
+			{
+				return false;
+			}
+		};
+
+		//连接原创主机
+		auto Connect(IP, unsigned short) -> bool
+		{
+
+		};
+
+		auto SendText(std::string) -> bool;
+
+		// 传输文件有个回调 CALL,时刻回传显示传输进度
+		auto SendFile(std::string) -> bool;
+
+		auto close() -> bool;
+	};
+
+	
+}
 
 #endif //!___MIRACLEFOREST_MEET_TCPCLIENT___
+
