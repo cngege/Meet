@@ -19,9 +19,6 @@
     <ClInclude Include="..\include\ip.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\port.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\tcpclient.hpp">
       <Filter>include</Filter>
     </ClInclude>

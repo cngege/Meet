@@ -151,7 +151,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\ip.hpp" />
-    <ClInclude Include="..\include\port.hpp" />
     <ClInclude Include="..\include\tcpclient.hpp" />
     <ClInclude Include="..\include\tcpserver.hpp" />
   </ItemGroup>

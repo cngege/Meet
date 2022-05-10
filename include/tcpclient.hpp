@@ -61,10 +61,27 @@ namespace meet
 			{
 				return false;
 			}
+			// 开启一个线程 循环接收网络消息
+			return true;
 		};
 
 		//连接原创主机
-		auto Connect(IP, unsigned short) -> bool
+		auto Connect(IP ip, unsigned short port) -> bool
+		{
+			sock.sin_port = htons(port);
+			memcpy(&sock.sin_addr, ip.GetHost()->h_addr, ip.GetHost()->h_length);
+			if (connect(sockfd, (struct sockaddr*)&sock, sizeof(sock)) != 0)
+			{
+				//perror("connect");
+				closesocket(sockfd);
+				return false;
+			}
+			connected = true;
+			return true;
+		};
+
+		//断开连接 调用函数断开与主机的连接
+		auto DisConnect() -> bool
 		{
 
 		};
@@ -80,6 +97,11 @@ namespace meet
 
 		};
 
+	private:
+		auto StartRecv() -> void
+		{
+
+		};
 	};
 
 	
