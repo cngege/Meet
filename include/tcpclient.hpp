@@ -38,9 +38,16 @@ namespace meet
 				sock.sin_family = AF_INET6;
 			}
 		}
+		~TCPClient()
+		{
+			if (sockfd)
+			{
+				closesocket(sockfd);
+			}
+		}
 
 	private:
-		int sockfd;
+		SOCKET sockfd;
 		sockaddr_in sock;
 		bool connected = false;
 		Family family;
@@ -62,12 +69,17 @@ namespace meet
 
 		};
 
-		auto SendText(std::string) -> bool;
+		auto SendText(std::string) -> bool
+		{
+
+		};
 
 		// 传输文件有个回调 CALL,时刻回传显示传输进度
-		auto SendFile(std::string) -> bool;
+		auto SendFile(std::string) -> bool
+		{
 
-		auto close() -> bool;
+		};
+
 	};
 
 	
