@@ -37,7 +37,10 @@ namespace meet
 	private:
 		hostent* host;
 	public:
-		auto GetHost()->hostent*;
+		auto GetHost()->hostent*
+		{
+			return host;
+		};
 	public:
 
 		//从主机名中获取IP主机信息
