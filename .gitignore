@@ -32,3 +32,4 @@
 *.app
 /.vs/Meet/v17
 /Meet/x64/Debug
+/build
