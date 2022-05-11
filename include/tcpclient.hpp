@@ -54,7 +54,10 @@ namespace meet
 
 	public:
 
-		//初始化客户端  初始化前先注册好各种监听函数
+		/// <summary>
+		/// 初始化客户端  初始化前先注册好各种监听函数
+		/// </summary>
+		/// <returns></returns>
 		auto Init() -> bool
 		{
 			if ((sockfd = socket(sock.sin_family, SOCK_STREAM, 0)) == -1)
@@ -65,7 +68,12 @@ namespace meet
 			return true;
 		};
 
-		//连接原创主机
+		/// <summary>
+		/// 连接远程主机
+		/// </summary>
+		/// <param name="ip">主机 ip类</param>
+		/// <param name="port">远程主机的端口</param>
+		/// <returns>连接成功/失败</returns>
 		auto Connect(IP ip, unsigned short port) -> bool
 		{
 			sock.sin_port = htons(port);

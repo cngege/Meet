@@ -43,7 +43,11 @@ namespace meet
 		};
 	public:
 
-		//从主机名中获取IP主机信息
+		/// <summary>
+		/// 从主机名中获取IP主机信息
+		/// </summary>
+		/// <param name="hostname">主机名,域名</param>
+		/// <returns></returns>
 		static auto gethostbyname(std::string hostname)->hostent*
 		{
 			return gethostbyname(hostname.c_str());
