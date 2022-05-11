@@ -16,6 +16,25 @@
 #ifndef ___MIRACLEFOREST_MEET_TCPSERVER___
 #define ___MIRACLEFOREST_MEET_TCPSERVER___
 
+#include "ip.hpp"
 
+namespace meet {
+
+    /// <summary>
+    /// 
+    /// </summary>
+    class TCPServer {
+    public:
+
+    public:
+
+    public:
+
+    protected:
+    private:
+
+    };//class TCPServer
+
+}//namespace meet
 
 #endif //!___MIRACLEFOREST_MEET_TCPSERVER___

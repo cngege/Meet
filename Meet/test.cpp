@@ -21,6 +21,7 @@
 
 int main() {
 
+    meet::TCPClient t;
 
     system("pause");
     return 0;

@@ -18,26 +18,30 @@
 
 #include <string>
 #include "ip.hpp"
+#include "error.hpp"
 
-namespace meet
-{
+namespace meet {
 
-	class TCPClient
-	{
-		TCPClient(Family f = Family::IPV4)
-		{
+	/// <summary>
+	/// 
+	/// </summary>
+	class TCPClient {
+	public:
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="f"></param>
+		TCPClient(IPVFamily f = IPVFamily::IPV4) :family(f) {
 			memset(&sock, 0, sizeof(sock));
-			family = f;
-			if (f == Family::IPV4)
-			{
+			if (f == IPVFamily::IPV4) {
 				sock.sin_family = AF_INET;
 			}
-			else if (f == Family::IPV6)
-			{
-				//暂不支持
+			else if (f == IPVFamily::IPV6) {
+				//temporarily not supported
 				sock.sin_family = AF_INET6;
 			}
 		}
+
 		~TCPClient()
 		{
 			if (sockfd)
@@ -45,67 +49,82 @@ namespace meet
 				closesocket(sockfd);
 			}
 		}
+	public:
+		/// <summary>
+		/// init client
+		/// </summary>
+		/// <returns></returns>
+		Error init() {
+			WSADATA wsaData;
+			if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+				return Error::initializationWinsockFailed;
+			}
+			if ((sockfd = socket(sock.sin_family, SOCK_STREAM, 0)) == SOCKET_ERROR) {
+				return Error::socketError;
+			}
+			return Error::noError;
+		};
+
+		/// <summary>
+		/// Connect to the original host.
+		/// </summary>
+		/// <param name="ip">The ip.</param>
+		/// <param name="port">The port.</param>
+		/// <returns></returns>
+		Error connect(IP ip, unsigned short port) {
+			sock.sin_port = htons(port);
+			memcpy(&sock.sin_addr, ip.getHost()->h_addr, ip.getHost()->h_length);
+			if (::connect(sockfd, (struct sockaddr*)&sock, sizeof(sock)) != 0) {
+				//perror("connect");
+				closesocket(sockfd);
+				return Error::unkError;
+			}
+			connected = true;
+			return Error::noError;
+		};
+
+		/// <summary>
+		/// Dises the connect.
+		/// </summary>
+		/// <returns></returns>
+		Error disConnect() {
+
+		};
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name=""></param>
+		/// <returns></returns>
+		Error sendText(std::string) {
+
+		};
+
+		/// <summary>
+		/// Sends the file.
+		/// </summary>
+		/// <param name=""></param>
+		/// <returns></returns>
+		Error sendFile(std::string) {
+
+		};
+
+	private:
+		/// <summary>
+		/// Starts the recv.
+		/// </summary>
+		void StartRecv() {
+
+		};
 
 	private:
 		SOCKET sockfd;
 		sockaddr_in sock;
 		bool connected = false;
-		Family family;
+		IPVFamily family;
+	};//class TCPClient
 
-	public:
-
-		//初始化客户端  初始化前先注册好各种监听函数
-		auto Init() -> bool
-		{
-			if ((sockfd = socket(sock.sin_family, SOCK_STREAM, 0)) == -1)
-			{
-				return false;
-			}
-			// 开启一个线程 循环接收网络消息
-			return true;
-		};
-
-		//连接原创主机
-		auto Connect(IP ip, unsigned short port) -> bool
-		{
-			sock.sin_port = htons(port);
-			memcpy(&sock.sin_addr, ip.GetHost()->h_addr, ip.GetHost()->h_length);
-			if (connect(sockfd, (struct sockaddr*)&sock, sizeof(sock)) != 0)
-			{
-				//perror("connect");
-				closesocket(sockfd);
-				return false;
-			}
-			connected = true;
-			return true;
-		};
-
-		//断开连接 调用函数断开与主机的连接
-		auto DisConnect() -> bool
-		{
-
-		};
-
-		auto SendText(std::string) -> bool
-		{
-
-		};
-
-		// 传输文件有个回调 CALL,时刻回传显示传输进度
-		auto SendFile(std::string) -> bool
-		{
-
-		};
-
-	private:
-		auto StartRecv() -> void
-		{
-
-		};
-	};
-
-	
-}
+}//namespace meet
 
 #endif //!___MIRACLEFOREST_MEET_TCPCLIENT___
 

@@ -9,6 +9,12 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="third-party">
+      <UniqueIdentifier>{6f55e143-0333-4ea5-a157-6afeaef668d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third-party\nlohmann">
+      <UniqueIdentifier>{29e9487b-d788-469e-a67d-2ccfb5fc83d8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="test.cpp">
@@ -27,6 +33,12 @@
     </ClInclude>
     <ClInclude Include="..\include\meet">
       <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\error.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third-party\nlohmann\json.hpp">
+      <Filter>third-party\nlohmann</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

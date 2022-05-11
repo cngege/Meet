@@ -18,39 +18,48 @@
 
 #include <string>
 #include <WinSock2.h>
+#include <WS2tcpip.h>
+#include <thread>
+#include "error.hpp"
+//#include "../third-party/nlohmann/json.hpp"
+#pragma comment(lib,"ws2_32.lib")
 
 namespace meet
 {
-	enum class Family
-	{
+	enum class IPVFamily{
 		IPV4 = 0,
 		IPV6 = 1
-	};
+	};//enum class Family
 
-	class IP
-	{
-		IP(hostent* _host)
-		{
-			host = _host;
-		};
-
-	private:
-		hostent* host;
+	/// <summary>
+	/// 
+	/// </summary>
+	class IP{
+		IP(hostent* _host):host(_host) {};
 	public:
-		auto GetHost()->hostent*
-		{
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <returns></returns>
+		hostent* getHost() {
 			return host;
 		};
-	public:
-
-		//从主机名中获取IP主机信息
+	public:		
+		/// <summary>
+		/// Get IP host information from hostname
+		/// </summary>
+		/// <param name="hostname"></param>
+		/// <returns></returns>
 		static auto gethostbyname(std::string hostname)->hostent*
 		{
 			return gethostbyname(hostname.c_str());
 		};
-	};
 
-}
+	private:
+		hostent* host;
+	};//class IP
+
+}//namespace meet
 
 #endif //!___MIRACLEFOREST_MEET_IP___
 
