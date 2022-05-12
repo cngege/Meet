@@ -34,7 +34,8 @@ namespace meet
 
 	enum class DataType : byte {
 		TEXT = 0x01,
-		FILE = 0x02
+		FILE = 0x02,
+		MAXCONNECT = 0x03,		//只会在服务端发送给客户端 已到达最大的连接数,服务端将断开连接
 	};
 
 	/// <summary>
