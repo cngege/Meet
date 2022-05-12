@@ -20,6 +20,7 @@
 #include <thread>
 
 #include "ip.hpp"
+#include <WS2tcpip.h>
 
 namespace meet{
 	/// <summary>
@@ -47,7 +48,7 @@ namespace meet{
 		/// <returns></returns>
 		Error connect(IP ip, ushort port) {
 			if (connected){
-				return Error::noError;
+				return Error::connecting;
 			}
 			//Get IP address type v4/v6
 			memset(&sock, 0, sizeof(sock));
@@ -79,6 +80,38 @@ namespace meet{
 			return Error::noError;
 		};
 		
+		/// <summary>
+		/// 指定IPV4的IP进行连接
+		/// </summary>
+		/// <param name="ip">远程主机ipv4地址,如"1.2.3.4"</param>
+		/// <param name="port">远程主机端口</param>
+		/// <returns></returns>
+		Error connectV4(std::string ip, ushort port) {
+			hostent* ipaddrA;
+			if (::inet_pton(AF_INET, ip.c_str(), &ipaddrA->h_addr) != 1) //0:字符串不是有效的IP地址,-1:其他错误
+			{
+				return Error::changeError;
+			};
+			IP ipaddrB(ipaddrA);
+			return connect(ipaddrB, port);
+		}
+
+		/// <summary>
+		/// 指定IPV6的IP进行连接
+		/// </summary>
+		/// <param name="ip">远程主机ipv6地址,如"2000:0:0:0:0:0:0:1"</param>
+		/// <param name="port">远程主机端口</param>
+		/// <returns></returns>
+		Error connectV6(std::string ip, ushort port) {
+			hostent* ipaddrA;
+			if (::inet_pton(AF_INET6, ip.c_str(), &ipaddrA->h_addr) != 1) //0:字符串不是有效的IP地址,-1:其他错误
+			{
+				return Error::changeError;
+			};
+			IP ipaddrB(ipaddrA);
+			return connect(ipaddrB, port);
+		}
+
 		/// <summary>
 		/// Disconnection
 		/// </summary>
