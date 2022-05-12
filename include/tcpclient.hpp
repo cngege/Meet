@@ -117,8 +117,7 @@ namespace meet{
 		/// </summary>
 		/// <returns></returns>
 		Error disConnect(){
-			if (connected && sockfd){
-				closesocket(sockfd);
+			if (connected && sockfd && closesocket(sockfd) == 0){
 				return Error::noError;
 			}
 			return Error::unkError;
@@ -153,9 +152,9 @@ namespace meet{
 	public:
 
 		/// <summary>
-		/// 
+		/// 线程函数，负责接收网络数据包,并分类分析处理
 		/// </summary>
-		/// <param name="c"></param>
+		/// <param name="c">TCPClient 实例</param>
 		static void startRecv(TCPClient* c) {
 			if (!c->connected){
 				char buffer[5];
