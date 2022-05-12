@@ -35,6 +35,7 @@ namespace meet {
 		connectFailed,
 		unsupportedOperations,
 		connecting,
+		noConnected,
 		changeError
     };//enum class Error
 
@@ -82,6 +83,9 @@ namespace meet {
 		}
 		case connecting: {
 			return "connecting";
+		}
+		case noConnected: {
+			return "noConnected";
 		}
 		case changeError: {
 			return "changeError";
