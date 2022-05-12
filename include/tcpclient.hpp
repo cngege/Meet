@@ -17,77 +17,73 @@
 #define ___MIRACLEFOREST_MEET_TCPCLIENT___
 
 #include <string>
+#include <thread>
+
 #include "ip.hpp"
-#include "error.hpp"
 
-namespace meet {
-
+namespace meet{
 	/// <summary>
 	/// 
 	/// </summary>
-	class TCPClient {
+	class TCPClient{
+		using DisConnectEvent = void(__fastcall*)();
+		using ushort = unsigned short;
 	public:
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="f"></param>
-		TCPClient(IPVFamily f = IPVFamily::IPV4) :family(f) {
-			memset(&sock, 0, sizeof(sock));
-			if (f == IPVFamily::IPV4) {
-				sock.sin_family = AF_INET;
-			}
-			else if (f == IPVFamily::IPV6) {
-				//temporarily not supported
-				sock.sin_family = AF_INET6;
-			}
-		}
-
-		~TCPClient()
-		{
-			if (sockfd)
-			{
+		TCPClient(){}
+		~TCPClient(){
+			if (sockfd){
 				closesocket(sockfd);
+				connected = false;
 			}
 		}
 	public:
+	public:
+
 		/// <summary>
-		/// init client
+		/// To connect to a remote host, you must connect without establishing a connection
 		/// </summary>
+		/// <param name="ip">host</param>
+		/// <param name="port">port</param>
 		/// <returns></returns>
-		Error init() {
-			WSADATA wsaData;
-			if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-				return Error::initializationWinsockFailed;
+		Error connect(IP ip, ushort port) {
+			if (connected){
+				return Error::noError;
 			}
-			if ((sockfd = socket(sock.sin_family, SOCK_STREAM, 0)) == SOCKET_ERROR) {
+			//Get IP address type v4/v6
+			memset(&sock, 0, sizeof(sock));
+			u_short iptype = ip.getHost()->h_addrtype;
+			sock.sin_family = iptype;
+			if (iptype == AF_INET){
+				family = Family::IPV4;
+			}
+			else if (iptype == AF_INET6){
+				//family = Family::IPV6;
+				return Error::unsupportedOperations;
+			}
+
+			//Create sockets
+			if ((sockfd = socket(sock.sin_family, SOCK_STREAM, 0)) == SOCKET_ERROR){
 				return Error::socketError;
 			}
-			return Error::noError;
-		};
-
-		/// <summary>
-		/// Connect to the original host.
-		/// </summary>
-		/// <param name="ip">The ip.</param>
-		/// <param name="port">The port.</param>
-		/// <returns></returns>
-		Error connect(IP ip, unsigned short port) {
 			sock.sin_port = htons(port);
 			memcpy(&sock.sin_addr, ip.getHost()->h_addr, ip.getHost()->h_length);
-			if (::connect(sockfd, (struct sockaddr*)&sock, sizeof(sock)) != 0) {
-				//perror("connect");
+			if (::connect(sockfd, (struct sockaddr*)&sock, sizeof(sock)) == INVALID_SOCKET){
 				closesocket(sockfd);
-				return Error::unkError;
+				return Error::connectFailed;
 			}
 			connected = true;
+
+			///Open a thread Triggers a listening event after receiving and processing a message
+			recv_thread = std::thread(startRecv, this);
+			recv_thread.detach();
 			return Error::noError;
 		};
-
+		
 		/// <summary>
-		/// Dises the connect.
+		/// Disconnection
 		/// </summary>
 		/// <returns></returns>
-		Error disConnect() {
+		Error disConnect(){
 
 		};
 
@@ -101,30 +97,68 @@ namespace meet {
 		};
 
 		/// <summary>
-		/// Sends the file.
+		/// 
 		/// </summary>
 		/// <param name=""></param>
 		/// <returns></returns>
-		Error sendFile(std::string) {
+		Error sendFile(std::string){
 
 		};
 
-	private:
 		/// <summary>
-		/// Starts the recv.
+		/// Register callback events
 		/// </summary>
-		void StartRecv() {
-
+		/// <param name="_disConnectEvent"></param>
+		void onDisConnect(DisConnectEvent _disConnectEvent){
+			disConnectEvent = _disConnectEvent;
 		};
 
+	public:
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="c"></param>
+		static void startRecv(TCPClient* c) {
+			if (!c->connected){
+				char buffer[5];
+				memset(buffer, 0, sizeof(buffer));
+
+				while (c->connected){
+					int recvbytecount;
+					if ((recvbytecount = recv(c->sockfd, buffer, sizeof(buffer), 0)) <= 0){
+						//返回 0 网络中断
+						if (recvbytecount == 0){
+							c->connected = false;
+							c->disConnectEvent();
+							break;
+						}
+						if (recvbytecount == SOCKET_ERROR){
+							//copy数据时出错
+							//调用错误回调
+						}
+					}//if ((recvbytecount = recv(c->sockfd, buffer, sizeof(buffer), 0)) <= 0)
+
+					if (recvbytecount < 5){
+						continue;
+					}
+				}//while (c->connected)
+			}//if(!c->connected)
+		};//static void startRecv(TCPClient* c)
 	private:
 		SOCKET sockfd;
 		sockaddr_in sock;
-		bool connected = false;
-		IPVFamily family;
+    	bool connected = false;
+	    Family family;
+
+		std::thread recv_thread;
+
+		/// <summary>
+		/// Event
+		/// </summary>
+		DisConnectEvent disConnectEvent;
 	};//class TCPClient
 
 }//namespace meet
 
 #endif //!___MIRACLEFOREST_MEET_TCPCLIENT___
-

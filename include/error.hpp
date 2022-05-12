@@ -32,7 +32,8 @@ namespace meet {
 		recvFailed,
 		portTooSmall,
 		maxcouTooBig,
-		connectFailed
+		connectFailed,
+		unsupportedOperations
     };//enum class Error
 
 }//namespace meet
