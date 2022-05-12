@@ -34,8 +34,8 @@ namespace meet{
 		~TCPClient(){
 			if (sockfd){
 				closesocket(sockfd);
-				connected = false;
 			}
+			connected = false;
 		}
 	public:
 	public:
