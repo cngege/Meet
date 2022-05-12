@@ -25,19 +25,9 @@ namespace meet
 
 	class TCPClient
 	{
-		TCPClient(Family f = Family::IPV4)
+		TCPClient()
 		{
-			memset(&sock, 0, sizeof(sock));
-			family = f;
-			if (f == Family::IPV4)
-			{
-				sock.sin_family = AF_INET;
-			}
-			else if (f == Family::IPV6)
-			{
-				//暂不支持
-				sock.sin_family = AF_INET6;
-			}
+
 		}
 		~TCPClient()
 		{
@@ -65,7 +55,7 @@ namespace meet
 	public:
 
 		/// <summary>
-		/// 连接远程主机
+		/// 连接远程主机,必须要在未建立连接的情况下连接
 		/// </summary>
 		/// <param name="ip">主机 ip类</param>
 		/// <param name="port">远程主机的端口</param>
@@ -76,6 +66,20 @@ namespace meet
 			{
 				return true;
 			}
+			//获取IP地址类型 v4/v6
+			memset(&sock, 0, sizeof(sock));
+			u_short iptype = ip.GetHost()->h_addrtype;
+			sock.sin_family = iptype;
+			if (iptype == AF_INET)
+			{
+				family = Family::IPV4;
+			}
+			else if (iptype == AF_INET6)
+			{
+				family = Family::IPV6; //IPV6尚暂不支持
+			}
+
+			//创建套接字
 			if ((sockfd = socket(sock.sin_family, SOCK_STREAM, 0)) == -1)
 			{
 				return false;
