@@ -117,7 +117,11 @@ namespace meet{
 		/// </summary>
 		/// <returns></returns>
 		Error disConnect(){
-
+			if (connected && sockfd){
+				closesocket(sockfd);
+				return Error::noError;
+			}
+			return Error::unkError;
 		};
 
 		/// <summary>
