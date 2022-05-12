@@ -18,7 +18,6 @@
 
 #include <string>
 #include <WinSock2.h>
-#include "error.hpp"
 #include "../third-party/nlohmann/json.hpp"
 #pragma comment(lib,"ws2_32.lib")
 
