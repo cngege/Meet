@@ -25,11 +25,16 @@
 namespace meet
 {
 	/// <summary>
-	/// 
+	/// IP地址类型
 	/// </summary>
 	enum class Family{
 		IPV4 = 0,
 		IPV6 = 1
+	};
+
+	enum class DataType : byte {
+		TEXT = 0x01,
+		FILE = 0x02
 	};
 
 	/// <summary>
