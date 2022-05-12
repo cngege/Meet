@@ -36,6 +36,54 @@ namespace meet {
 		unsupportedOperations
     };//enum class Error
 
+	static std::string getString(Error errorCode) {
+		switch (errorCode) {
+			using enum Error;
+		case noError: {
+			return "noError";
+		}
+		case unkError: {
+			return "unkError";
+		}
+		case initializationWinsockFailed: {
+			return "initializationWinsockFailed";
+		}
+		case socketError: {
+			return "socketError";
+		}
+		case bindError: {
+			return "bindError";
+		}
+		case listenError: {
+			return "listenError";
+		}
+		case acceptError: {
+			return "acceptError";
+		}
+		case sendFailed: {
+			return "sendFailed";
+		}
+		case recvFailed: {
+			return "recvFailed";
+		}
+		case portTooSmall: {
+			return "portTooSmall";
+		}
+		case maxcouTooBig: {
+			return "maxcouTooBig";
+		}
+		case connectFailed: {
+			return "connectFailed";
+		}
+		case unsupportedOperations: {
+			return "unsupportedOperations";
+		}
+		default: {
+			return "Error! unk errorCode!";
+		}
+		}
+	}
+
 }//namespace meet
 
 #endif //!___MIRACLEFOREST_MEET_ERROR___
