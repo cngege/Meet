@@ -124,12 +124,25 @@ namespace meet{
 		};
 
 		/// <summary>
-		/// 
+		/// 发送文本
 		/// </summary>
-		/// <param name=""></param>
+		/// <param name="text">待发送的文本</param>
 		/// <returns></returns>
-		Error sendText(std::string) {
-
+		Error sendText(std::string text) {
+			if (!connected) {
+				return Error::noConnected;
+			}
+			auto textlen = text.length();
+			auto sendbyte = new char[textlen + 10]; // textlen \n:1 + size_t:8 + datatype:1 = 10
+			memset(sendbyte, 0, textlen + 10);
+			memcpy(sendbyte, &textlen, sizeof(size_t));
+			sendbyte[8] = (byte)DataType::TEXT;
+			sprintf(sendbyte + 9,text.c_str());
+			auto sendcount = send(sockfd, sendbyte, strlen(sendbyte), 0);
+			if (sendcount <= 0) {
+				return Error::sendFailed;
+			}
+			return Error::noError;
 		};
 
 		/// <summary>
