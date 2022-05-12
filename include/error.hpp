@@ -20,7 +20,7 @@
 
 namespace meet {
 
-    enum class Error : int{
+	enum class Error : int {
 		noError = 0,
 		unkError = -1,
 		initializationWinsockFailed = -16,
@@ -33,7 +33,9 @@ namespace meet {
 		portTooSmall,
 		maxcouTooBig,
 		connectFailed,
-		unsupportedOperations
+		unsupportedOperations,
+		connecting,
+		changeError
     };//enum class Error
 
 }//namespace meet
