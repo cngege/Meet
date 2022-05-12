@@ -80,6 +80,12 @@ namespace meet {
 		case unsupportedOperations: {
 			return "unsupportedOperations";
 		}
+		case connecting: {
+			return "connecting";
+		}
+		case changeError: {
+			return "changeError";
+		}
 		default: {
 			return "Error! unk errorCode!";
 		}
