@@ -82,7 +82,7 @@ namespace meet {
 			return "Error! unk errorCode!";
 		}
 		}
-	}
+	}//static std::string getString(Error errorCode)
 
 }//namespace meet
 

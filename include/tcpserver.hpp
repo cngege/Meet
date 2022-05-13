@@ -29,8 +29,15 @@ namespace meet {
         using ulong = unsigned long;
     public:
         TCPServer(
+            SOCKADDR_IN sockaddrin = {},
+            SOCKET socket = NULL,
             const std::function<Error(const IP&, ushort, const TCPServer&)>& onNewClientConnect = [](const IP&, ushort, const TCPServer&) ->Error {return Error::noError; }
-        ):_onNewClientConnect(onNewClientConnect) {}
+        ):_onNewClientConnect(onNewClientConnect)
+            , _socket(socket) {
+            _sin.sin_family = 0;
+            _sin.sin_port = htons(0);
+            _sin.sin_addr.S_un.S_addr = 0;
+        }
         ~TCPServer(){}
     public:
 
@@ -46,31 +53,29 @@ namespace meet {
             if (WSAStartup(versionRequested, &wsaDat) != 0) {
                 return Error::initializationWinsockFailed;
             }
-            int af;
-            if (iptype == AF_INET) {
-                af = AF_INET;
-            }
-            else if (iptype == AF_INET6) {
+            int af = AF_INET;
+            if (iptype == AF_INET6) {
                 af = AF_INET6;
             }
-            slisten = socket(af, SOCK_STREAM, IPPROTO_TCP);
-            if (slisten == INVALID_SOCKET) {
+            _socket = socket(af, SOCK_STREAM, IPPROTO_TCP);
+            if (_socket == INVALID_SOCKET) {
                 return Error::socketError;
             }
-            sin.sin_family = af;
-            sin.sin_port = htons(port);
-            sin.sin_addr.S_un.S_addr = S_addr;
-            if (bind(slisten, (LPSOCKADDR)&sin, sizeof(sin)) == SOCKET_ERROR){
+            _sin.sin_family = af;
+            _sin.sin_port = htons(port);
+            _sin.sin_addr.S_un.S_addr = S_addr;
+            if (bind(_socket, (LPSOCKADDR)&_sin, sizeof(_sin)) == SOCKET_ERROR){
                 return Error::bindError;
             }
+            return Error::noError;
         }
     public:
 
     protected:
     private:
         std::function<Error(const IP&,ushort,const TCPServer&)> _onNewClientConnect;
-        SOCKADDR_IN sin;
-        SOCKET slisten;
+        SOCKADDR_IN _sin;
+        SOCKET _socket;
     };//class TCPServer
 
 }//namespace meet
