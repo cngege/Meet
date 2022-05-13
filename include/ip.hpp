@@ -18,7 +18,6 @@
 
 #include <string>
 #include <WinSock2.h>
-#include "error.hpp"
 #include "../third-party/nlohmann/json.hpp"
 #pragma comment(lib,"ws2_32.lib")
 
@@ -26,11 +25,17 @@
 namespace meet
 {
 	/// <summary>
-	/// 
+	/// IP地址类型
 	/// </summary>
 	enum class Family{
 		IPV4 = 0,
 		IPV6 = 1
+	};
+
+	enum class DataType : byte {
+		TEXT = 0x01,
+		FILE = 0x02,
+		MAXCONNECT = 0x03,		//只会在服务端发送给客户端 已到达最大的连接数,服务端将断开连接
 	};
 
 	/// <summary>

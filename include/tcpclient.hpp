@@ -20,6 +20,7 @@
 #include <thread>
 
 #include "ip.hpp"
+#include <WS2tcpip.h>
 
 namespace meet{
 	/// <summary>
@@ -33,8 +34,8 @@ namespace meet{
 		~TCPClient(){
 			if (sockfd){
 				closesocket(sockfd);
-				connected = false;
 			}
+			connected = false;
 		}
 	public:
 	public:
@@ -47,7 +48,7 @@ namespace meet{
 		/// <returns></returns>
 		Error connect(IP ip, ushort port) {
 			if (connected){
-				return Error::noError;
+				return Error::connecting;
 			}
 			//Get IP address type v4/v6
 			memset(&sock, 0, sizeof(sock));
@@ -80,20 +81,68 @@ namespace meet{
 		};
 		
 		/// <summary>
+		/// 指定IPV4的IP进行连接
+		/// </summary>
+		/// <param name="ip">远程主机ipv4地址,如"1.2.3.4"</param>
+		/// <param name="port">远程主机端口</param>
+		/// <returns></returns>
+		Error connectV4(std::string ip, ushort port) {
+			hostent* ipaddrA;
+			if (::inet_pton(AF_INET, ip.c_str(), &ipaddrA->h_addr) != 1) //0:字符串不是有效的IP地址,-1:其他错误
+			{
+				return Error::changeError;
+			};
+			IP ipaddrB(ipaddrA);
+			return connect(ipaddrB, port);
+		}
+
+		/// <summary>
+		/// 指定IPV6的IP进行连接
+		/// </summary>
+		/// <param name="ip">远程主机ipv6地址,如"2000:0:0:0:0:0:0:1"</param>
+		/// <param name="port">远程主机端口</param>
+		/// <returns></returns>
+		Error connectV6(std::string ip, ushort port) {
+			hostent* ipaddrA;
+			if (::inet_pton(AF_INET6, ip.c_str(), &ipaddrA->h_addr) != 1) //0:字符串不是有效的IP地址,-1:其他错误
+			{
+				return Error::changeError;
+			};
+			IP ipaddrB(ipaddrA);
+			return connect(ipaddrB, port);
+		}
+
+		/// <summary>
 		/// Disconnection
 		/// </summary>
 		/// <returns></returns>
 		Error disConnect(){
-
+			if (connected && sockfd && closesocket(sockfd) == 0){
+				return Error::noError;
+			}
+			return Error::unkError;
 		};
 
 		/// <summary>
-		/// 
+		/// 发送文本
 		/// </summary>
-		/// <param name=""></param>
+		/// <param name="text">待发送的文本</param>
 		/// <returns></returns>
-		Error sendText(std::string) {
-
+		Error sendText(std::string text) {
+			if (!connected) {
+				return Error::noConnected;
+			}
+			auto textlen = text.length();
+			auto sendbyte = new char[textlen + 10]; // textlen \n:1 + size_t:8 + datatype:1 = 10
+			memset(sendbyte, 0, textlen + 10);
+			memcpy(sendbyte, &textlen, sizeof(size_t));
+			sendbyte[8] = (byte)DataType::TEXT;
+			sprintf(sendbyte + 9,text.c_str());
+			auto sendcount = send(sockfd, sendbyte, strlen(sendbyte), 0);
+			if (sendcount <= 0) {
+				return Error::sendFailed;
+			}
+			return Error::noError;
 		};
 
 		/// <summary>
@@ -116,9 +165,9 @@ namespace meet{
 	public:
 
 		/// <summary>
-		/// 
+		/// 线程函数，负责接收网络数据包,并分类分析处理
 		/// </summary>
-		/// <param name="c"></param>
+		/// <param name="c">TCPClient 实例</param>
 		static void startRecv(TCPClient* c) {
 			if (!c->connected){
 				char buffer[5];

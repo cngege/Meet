@@ -20,7 +20,7 @@
 
 namespace meet {
 
-    enum class Error : int{
+	enum class Error : int {
 		noError = 0,
 		unkError = -1,
 		initializationWinsockFailed = -16,
@@ -33,7 +33,10 @@ namespace meet {
 		portTooSmall,
 		maxcouTooBig,
 		connectFailed,
-		unsupportedOperations
+		unsupportedOperations,
+		connecting,
+		noConnected,
+		changeError
     };//enum class Error
 
 	static std::string getString(Error errorCode) {
@@ -77,6 +80,15 @@ namespace meet {
 		}
 		case unsupportedOperations: {
 			return "unsupportedOperations";
+		}
+		case connecting: {
+			return "connecting";
+		}
+		case noConnected: {
+			return "noConnected";
+		}
+		case changeError: {
+			return "changeError";
 		}
 		default: {
 			return "Error! unk errorCode!";

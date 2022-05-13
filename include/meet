@@ -16,6 +16,7 @@
 #ifndef ___MIRACLEFOREST_MEET_MEET___
 #define ___MIRACLEFOREST_MEET_MEET___
 
+#include "error.hpp"
 #include "ip.hpp"
 #include "tcpclient.hpp"
 #include "tcpserver.hpp"
