@@ -16,9 +16,11 @@
 #ifndef ___MIRACLEFOREST_MEET_IP___
 #define ___MIRACLEFOREST_MEET_IP___
 
+#pragma warning (disable: 4996)
 #include <string>
 #include <WinSock2.h>
 #include "../third-party/nlohmann/json.hpp"
+#include "error.hpp"
 #pragma comment(lib,"ws2_32.lib")
 
 

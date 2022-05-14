@@ -81,14 +81,14 @@ namespace meet{
 		};
 		
 		/// <summary>
-		/// 指定IPV4的IP进行连接
+		/// Specify IPV4 IP for connection
 		/// </summary>
-		/// <param name="ip">远程主机ipv4地址,如"1.2.3.4"</param>
-		/// <param name="port">远程主机端口</param>
+		/// <param name="ip">Remote host ipv4 address, e.g. "127.0.0.1"</param>
+		/// <param name="port">Remote host port</param>
 		/// <returns></returns>
 		Error connectV4(std::string ip, ushort port) {
 			hostent* ipaddrA;
-			if (::inet_pton(AF_INET, ip.c_str(), &ipaddrA->h_addr) != 1) //0:字符串不是有效的IP地址,-1:其他错误
+			if (::inet_pton(AF_INET, ip.c_str(), &ipaddrA->h_addr) != 1) //0:String is not a valid IP address,-1:Other error
 			{
 				return Error::changeError;
 			};
@@ -97,10 +97,10 @@ namespace meet{
 		}
 
 		/// <summary>
-		/// 指定IPV6的IP进行连接
+		/// Specify IPV6 IP for connection
 		/// </summary>
-		/// <param name="ip">远程主机ipv6地址,如"2000:0:0:0:0:0:0:1"</param>
-		/// <param name="port">远程主机端口</param>
+		/// <param name="ip">Remote host ipv6 address, such as "2000:0:0:0:0:0:0:0:1"</param>
+		/// <param name="port">Remote host port</param>
 		/// <returns></returns>
 		Error connectV6(std::string ip, ushort port) {
 			hostent* ipaddrA;
@@ -124,9 +124,9 @@ namespace meet{
 		};
 
 		/// <summary>
-		/// 发送文本
+		///  Send text
 		/// </summary>
-		/// <param name="text">待发送的文本</param>
+		/// <param name="text">Text to be sent</param>
 		/// <returns></returns>
 		Error sendText(std::string text) {
 			if (!connected) {
@@ -165,9 +165,9 @@ namespace meet{
 	public:
 
 		/// <summary>
-		/// 线程函数，负责接收网络数据包,并分类分析处理
+		/// Thread function, responsible for receiving network packets, and classify and analyze the processing
 		/// </summary>
-		/// <param name="c">TCPClient 实例</param>
+		/// <param name="c">TCPClient Instance</param>
 		static void startRecv(TCPClient* c) {
 			if (!c->connected){
 				char buffer[5];
@@ -176,15 +176,15 @@ namespace meet{
 				while (c->connected){
 					int recvbytecount;
 					if ((recvbytecount = recv(c->sockfd, buffer, sizeof(buffer), 0)) <= 0){
-						//返回 0 网络中断
+						//Return 0 Network Outage
 						if (recvbytecount == 0){
 							c->connected = false;
 							c->disConnectEvent();
 							break;
 						}
 						if (recvbytecount == SOCKET_ERROR){
-							//copy数据时出错
-							//调用错误回调
+							//Error while copying data
+							//Calling error callbacks
 						}
 					}//if ((recvbytecount = recv(c->sockfd, buffer, sizeof(buffer), 0)) <= 0)
 

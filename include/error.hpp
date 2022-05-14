@@ -36,7 +36,9 @@ namespace meet {
 		unsupportedOperations,
 		connecting,
 		noConnected,
-		changeError
+		changeError,
+		theMaximumNumberOfConnectionsHasBeenReached,
+
     };//enum class Error
 
 	static std::string getString(Error errorCode) {
@@ -89,6 +91,9 @@ namespace meet {
 		}
 		case changeError: {
 			return "changeError";
+		}
+		case theMaximumNumberOfConnectionsHasBeenReached: {
+			return "theMaximumNumberOfConnectionsHasBeenReached";
 		}
 		default: {
 			return "Error! unk errorCode!";
