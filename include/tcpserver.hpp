@@ -19,6 +19,12 @@
 #include "ip.hpp"
 #include <map>
 #include <functional>
+#include <future>
+#include <utility>
+#include <format>
+
+#define LOG(x,...) if(_printCLog){printf(std::format((std::string(x)+"\n"),__VA_ARGS__).data());}
+#define LOGNON(...) if(_printCLog){printf(std::format(__VA_ARGS__).data());}
 
 namespace meet {
     /// <summary>
@@ -27,7 +33,7 @@ namespace meet {
     class TCPServer {
         using ushort = unsigned short;
         using ulong = unsigned long;
-
+    public:
         typedef struct clientInfo
         {
             SOCKET clientSocket;
@@ -45,16 +51,18 @@ namespace meet {
             int maxcou = 1,
             SOCKADDR_IN sockaddrin = {},
             SOCKET socket = NULL,
-            const std::function<Error(const IN_ADDR&, ushort, const TCPServer&)>& onNewClientConnect = [](const IN_ADDR&, ushort, const TCPServer&) ->Error {return Error::noError; }
+            const std::function<Error(const IN_ADDR&, ushort, const clientInfo&)>& onNewClientConnect = [](const IN_ADDR&, ushort, const clientInfo&) ->Error {return Error::noError; }
         ) :_onNewClientConnect(onNewClientConnect)
             , _socket(socket)
             , _Clinum(0)
-            , _Maxcou(maxcou) {
+            , _Maxcou(maxcou)
+            , _endServer(false) {
             _sin.sin_family = 0;
             _sin.sin_port = htons(0);
             _sin.sin_addr.S_un.S_addr = 0;
         }
         ~TCPServer() {
+            _endServer = true;
             closesocket(_socket);
             WSACleanup();
         }
@@ -71,13 +79,14 @@ namespace meet {
         /// <param name="onNewClientConnect"></param>
         /// <returns></returns>
         Error initServer(
+            bool printCLog,
             WSADATA& wsaDat,
             int maxcou = 1,
             ulong S_addr = INADDR_ANY,
             ushort port = rand() % 65536,
             int iptype = AF_INET,
             ushort versionRequested = MAKEWORD(2, 2),
-            const std::function<Error(const IN_ADDR&, ushort, const TCPServer&)>& onNewClientConnect = [](const IN_ADDR&, ushort, const TCPServer&) ->Error {return Error::noError; }
+            const std::function<Error(const IN_ADDR&, ushort, const clientInfo&)>& onNewClientConnect = [](const IN_ADDR&, ushort, const clientInfo&) ->Error {return Error::noError; }
         ) {
             _Maxcou = maxcou;
             _onNewClientConnect = onNewClientConnect;
@@ -95,41 +104,70 @@ namespace meet {
             _sin.sin_family = af;
             _sin.sin_port = htons(port);
             _sin.sin_addr.S_un.S_addr = S_addr;
-            if (bind(_socket, (LPSOCKADDR)&_sin, sizeof(_sin)) == SOCKET_ERROR) {
+            if (::bind(_socket, (LPSOCKADDR)&_sin, sizeof(_sin)) == SOCKET_ERROR) {
                 return Error::bindError;
             }
             return Error::noError;
         }//Error initServer(WSADATA& wsaDat,int maxcou = 1,ulong S_addr = INADDR_ANY,ushort port = rand() % 65536,int iptype = AF_INET,ushort versionRequested = MAKEWORD(2, 2),const std::function<Error(const IN_ADDR&, ushort, const TCPServer&)>& onNewClientConnect = [](const IN_ADDR&, ushort, const TCPServer&) ->Error {return Error::noError; })
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="backlog"></param>
+        /// <returns></returns>
         Error startServer(int backlog = 5) {
-            if (listen(_socket, backlog) == SOCKET_ERROR) {
+            LOG("strating server.");
+            LOG("Ready to listen,backlog={0}.", backlog);
+            if (::listen(_socket, backlog) == SOCKET_ERROR) {
+                LOG("listen Error!");
                 return Error::listenError;
             }
             clientInfo* ci = new clientInfo[_Maxcou];
-
+            int nAddrlen;
+            LOG("Start a loop to accept connections...");
             while (true) {
                 sockaddr_in remoteAddr;
-                int nAddrlen = sizeof(remoteAddr);
-                SOCKET c_socket = accept(_socket, (SOCKADDR*)&remoteAddr, &nAddrlen);;
+                if (_endServer) {
+                    LOG("END server!");
+                    return Error::noError;
+                }
+                nAddrlen = sizeof(remoteAddr);
+                LOG("start accept,addrlen={0}.", nAddrlen);
+                SOCKET c_socket = ::accept(_socket, (SOCKADDR*)&remoteAddr, &nAddrlen);
+                char Buf[20] = { '\0' };
+                LOG("A connection was accepted!IP:{0},Port:{1},", ::inet_ntop(AF_INET, (void*)&remoteAddr.sin_addr, Buf, 16), remoteAddr.sin_port);
                 if (_Clinum < _Maxcou) {
                     if (c_socket == INVALID_SOCKET) {
                         continue;
                     }
                     ci[_Clinum].clientSocket = c_socket;
-                    std::thread t(
-                        _onNewClientConnect,
-                        (remoteAddr.sin_addr),
-                        (remoteAddr.sin_port),
-                        (ci[_Clinum].clientSocket)
-                    );
+                    LOG("Ready to start threads for {0}:{1}!", ::inet_ntop(AF_INET, (void*)&remoteAddr.sin_addr, Buf, 16), remoteAddr.sin_port);
+                    
+                    std::jthread t{
+                        [&](TCPServer* _this,const IN_ADDR& addr, ushort port,const clientInfo& client) {
+                    _onNewClientConnect(addr,port,client);
+                    closesocket(client.clientSocket);
+                    _this->setClinum((_this->getClinum() - 1));
+                    char sendBuf[20] = { '\0' };
+                    LOG("End of thread {0}:{1}", inet_ntop(AF_INET, (void*)&addr, sendBuf, 16),port);
+                    },
+                        this,
+                        remoteAddr.sin_addr,
+                        remoteAddr.sin_port,
+                        ci[_Clinum]
+                    };
                     t.detach();
+                    LOG("Already for {0}:{1} start thread! Thread ID:{2}", ::inet_ntop(AF_INET, (void*)&remoteAddr.sin_addr, Buf, 16), remoteAddr.sin_port,t.get_id()._Id);
                     _Clinum++;
+                    LOG("Number of current connections:{0}", _Clinum);
                 }//if (_Clinum < _Maxcou)
                 else {
+                    LOG("Error!The number of connections exceeded the maximum value:{0}", _Maxcou);
                     return Error::theMaximumNumberOfConnectionsHasBeenReached;
                 }
             }//while (true)
-
+            LOG("unkError!");
+            return Error::unkError;
         }//Error startServer(int backlog = 5)
 
     public:
@@ -172,32 +210,44 @@ namespace meet {
         /// get onNewClientConnect function
         /// </summary>
         /// <returns>onNewClientConnect function</returns>
-        std::function<Error(const IN_ADDR&, ushort, const TCPServer&)> getonNewClientConnect() const {
+        std::function<Error(const IN_ADDR&, ushort, const clientInfo&)> getonNewClientConnect() const {
             return _onNewClientConnect;
         }
         /// <summary>
         /// set get onNewClientConnect function
         /// </summary>
         /// <param name="onNewClientConnect">new get onNewClientConnect function</param>
-        void setonNewClientConnect(std::function<Error(const IN_ADDR&, ushort, const TCPServer&)> onNewClientConnect) {
+        void setonNewClientConnect(std::function<Error(const IN_ADDR&, ushort, const clientInfo&)> onNewClientConnect) {
             _onNewClientConnect = onNewClientConnect;
         }
         /// <summary>
         /// get _Clinum
         /// </summary>
         /// <returns>_Clinum</returns>
-        int getClinum() {
+        int getClinum() const {
             return _Clinum;
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="Clinum"></param>
+        void setClinum(int Clinum) {
+            _Clinum = Clinum;
         }
     protected:
     private:
-        std::function<Error(const IN_ADDR&, ushort, const TCPServer&)> _onNewClientConnect;
+    private:
+        std::function<Error(const IN_ADDR&, ushort, const clientInfo&)> _onNewClientConnect;
         SOCKADDR_IN _sin;
         SOCKET _socket;
         int _Clinum;
         int _Maxcou;
+        bool _endServer;
+        bool _printCLog;
     };//class TCPServer
 
 }//namespace meet
+
+#undef LOG
 
 #endif //!___MIRACLEFOREST_MEET_TCPSERVER___
