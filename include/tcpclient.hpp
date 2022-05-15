@@ -18,9 +18,7 @@
 
 #include <string>
 #include <thread>
-
 #include "ip.hpp"
-#include <WS2tcpip.h>
 
 namespace meet{
 	/// <summary>
@@ -32,10 +30,10 @@ namespace meet{
 	public:
 		TCPClient(){}
 		~TCPClient(){
-			if (sockfd){
-				closesocket(sockfd);
+			if (_sockfd){
+				closesocket(_sockfd);
 			}
-			connected = false;
+			_connected = false;
 		}
 	public:
 	public:
@@ -47,36 +45,40 @@ namespace meet{
 		/// <param name="port">port</param>
 		/// <returns></returns>
 		Error connect(IP ip, ushort port) {
-			if (connected){
+			if (_connected){
 				return Error::connecting;
 			}
 			//Get IP address type v4/v6
-			memset(&sock, 0, sizeof(sock));
-			u_short iptype = ip.getHost()->h_addrtype;
-			sock.sin_family = iptype;
-			if (iptype == AF_INET){
-				family = Family::IPV4;
-			}
-			else if (iptype == AF_INET6){
-				//family = Family::IPV6;
+			memset(&_sock, 0, sizeof(_sock));
+			_family = ip.family;
+			_sock.sin_family = (ip.family == Family::IPV4) ? AF_INET : AF_INET6;
+			if (ip.family == Family::IPV6){
 				return Error::unsupportedOperations;
 			}
 
+			//初始化套接字库
+			WSADATA wsadata; //定义一个WSADATA类型的结构体，存储被WSAStartup函数调用后返回的Windows Sockets数据
+			WORD sock_version = MAKEWORD(2, 0); //设置版本号
+			if (WSAStartup(sock_version, &wsadata)) //初始化套接字，启动构建，将“ws2_32.lib”加载到内存中
+			{
+				return Error::initializationWinsockFailed;
+			}
+
 			//Create sockets
-			if ((sockfd = socket(sock.sin_family, SOCK_STREAM, 0)) == SOCKET_ERROR){
+			if ((_sockfd = socket(_sock.sin_family, SOCK_STREAM, IPPROTO_TCP)) == SOCKET_ERROR){
 				return Error::socketError;
 			}
-			sock.sin_port = htons(port);
-			memcpy(&sock.sin_addr, ip.getHost()->h_addr, ip.getHost()->h_length);
-			if (::connect(sockfd, (struct sockaddr*)&sock, sizeof(sock)) == INVALID_SOCKET){
-				closesocket(sockfd);
+			_sock.sin_port = htons(port);
+			_sock.sin_addr = ip.inaddr;
+			if (::connect(_sockfd, (struct sockaddr*)&_sock, sizeof(_sock)) == INVALID_SOCKET){
+				closesocket(_sockfd);
 				return Error::connectFailed;
 			}
-			connected = true;
+			_connected = true;
 
 			///Open a thread Triggers a listening event after receiving and processing a message
-			recv_thread = std::thread(startRecv, this);
-			recv_thread.detach();
+			_recv_thread = std::thread(startRecv, this);
+			_recv_thread.detach();
 			return Error::noError;
 		};
 		
@@ -87,12 +89,7 @@ namespace meet{
 		/// <param name="port">Remote host port</param>
 		/// <returns></returns>
 		Error connectV4(std::string ip, ushort port) {
-			hostent* ipaddrA;
-			if (::inet_pton(AF_INET, ip.c_str(), &ipaddrA->h_addr) != 1) //0:String is not a valid IP address,-1:Other error
-			{
-				return Error::changeError;
-			};
-			IP ipaddrB(ipaddrA);
+			IP ipaddrB(Family::IPV4,ip);
 			return connect(ipaddrB, port);
 		}
 
@@ -103,7 +100,7 @@ namespace meet{
 		/// <param name="port">Remote host port</param>
 		/// <returns></returns>
 		Error connectV6(std::string ip, ushort port) {
-			hostent* ipaddrA;
+			hostent* ipaddrA = new hostent();
 			if (::inet_pton(AF_INET6, ip.c_str(), &ipaddrA->h_addr) != 1) //0:字符串不是有效的IP地址,-1:其他错误
 			{
 				return Error::changeError;
@@ -117,7 +114,7 @@ namespace meet{
 		/// </summary>
 		/// <returns></returns>
 		Error disConnect(){
-			if (connected && sockfd && closesocket(sockfd) == 0){
+			if (_connected && _sockfd && closesocket(_sockfd) == 0){
 				return Error::noError;
 			}
 			return Error::unkError;
@@ -129,7 +126,7 @@ namespace meet{
 		/// <param name="text">Text to be sent</param>
 		/// <returns></returns>
 		Error sendText(std::string text) {
-			if (!connected) {
+			if (!_connected) {
 				return Error::noConnected;
 			}
 			auto textlen = text.length();
@@ -138,7 +135,7 @@ namespace meet{
 			memcpy(sendbyte, &textlen, sizeof(size_t));
 			sendbyte[8] = (byte)DataType::TEXT;
 			sprintf(sendbyte + 9,text.c_str());
-			auto sendcount = send(sockfd, sendbyte, strlen(sendbyte), 0);
+			auto sendcount = send(_sockfd, sendbyte, strlen(sendbyte), 0);
 			if (sendcount <= 0) {
 				return Error::sendFailed;
 			}
@@ -146,20 +143,27 @@ namespace meet{
 		};
 
 		/// <summary>
-		/// 
+		/// 发送字节
 		/// </summary>
-		/// <param name=""></param>
+		/// <param name="data"></param>
 		/// <returns></returns>
-		Error sendFile(std::string){
-
+		Error sendData(char* data) {
+			if (!_connected) {
+				return Error::noConnected;
+			}
+			auto sendcount = send(_sockfd, data, strlen(data), 0);
+			if (sendcount <= 0) {
+				return Error::sendFailed;
+			}
+			return Error::noError;
 		};
 
 		/// <summary>
 		/// Register callback events
 		/// </summary>
-		/// <param name="_disConnectEvent"></param>
-		void onDisConnect(DisConnectEvent _disConnectEvent){
-			disConnectEvent = _disConnectEvent;
+		/// <param name="disConnectEvent"></param>
+		void onDisConnect(DisConnectEvent disConnectEvent){
+			_disConnectEvent = disConnectEvent;
 		};
 
 	public:
@@ -169,17 +173,17 @@ namespace meet{
 		/// </summary>
 		/// <param name="c">TCPClient Instance</param>
 		static void startRecv(TCPClient* c) {
-			if (!c->connected){
-				char buffer[5];
+			if (!c->_connected){
+				char buffer[1024];
 				memset(buffer, 0, sizeof(buffer));
 
-				while (c->connected){
+				while (c->_connected){
 					int recvbytecount;
-					if ((recvbytecount = recv(c->sockfd, buffer, sizeof(buffer), 0)) <= 0){
+					if ((recvbytecount = recv(c->_sockfd, buffer, sizeof(buffer), 0)) <= 0){
 						//Return 0 Network Outage
 						if (recvbytecount == 0){
-							c->connected = false;
-							c->disConnectEvent();
+							c->_connected = false;
+							c->_disConnectEvent();
 							break;
 						}
 						if (recvbytecount == SOCKET_ERROR){
@@ -195,17 +199,17 @@ namespace meet{
 			}//if(!c->connected)
 		};//static void startRecv(TCPClient* c)
 	private:
-		SOCKET sockfd;
-		sockaddr_in sock;
-    	bool connected = false;
-	    Family family;
+		SOCKET _sockfd = NULL;
+		sockaddr_in _sock;
+    	bool _connected = false;
+	    Family _family = Family::IPV4;
 
-		std::thread recv_thread;
+		std::thread _recv_thread;
 
 		/// <summary>
 		/// Event
 		/// </summary>
-		DisConnectEvent disConnectEvent;
+		DisConnectEvent _disConnectEvent = NULL;
 	};//class TCPClient
 
 }//namespace meet

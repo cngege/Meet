@@ -19,6 +19,8 @@
 #pragma warning (disable: 4996)
 #include <string>
 #include <WinSock2.h>
+#include <WS2tcpip.h>
+
 #include "../third-party/nlohmann/json.hpp"
 #include "error.hpp"
 #pragma comment(lib,"ws2_32.lib")
@@ -50,17 +52,35 @@ namespace meet
 		/// 
 		/// </summary>
 		/// <param name="_host"></param>
-		IP(hostent* _host):host(_host){};
-	public:
-	public:
-	public:
+		IP(hostent* host){
+			if (host->h_addrtype == AF_INET) {
+				family = Family::IPV4;
+			}
+			else if (host->h_addrtype == AF_INET6) {
+				family = Family::IPV6;
+			}
+			memcpy(&inaddr, host->h_addr, host->h_length);
+		};
+
 		/// <summary>
 		/// 
 		/// </summary>
-		/// <returns></returns>
-		hostent* getHost() {
-			return host;
-		};
+		/// <param name="ipfamily">地址族</param>
+		/// <param name="addr">字符串ip地址</param>
+		IP(Family ipfamily,std::string addr) {
+			family = ipfamily;
+			INT a = 10;
+			if (ipfamily == Family::IPV4){
+				a = ::inet_pton(AF_INET, addr.c_str(), &inaddr);
+			}
+			else if (ipfamily == Family::IPV6){
+				a = ::inet_pton(AF_INET6, addr.c_str(), &inaddr);
+			}
+		}
+	public:
+	public:
+	public:
+
 	public:
 
 		/// <summary>
@@ -71,11 +91,15 @@ namespace meet
 		static hostent* gethostbyname(std::string hostname) {
 			return gethostbyname(hostname.c_str());
 		}
-	private:
+	public:
 		/// <summary>
-		/// 
+		/// IN_ADDR格式的IP地址
 		/// </summary>
-		hostent* host;
+		IN_ADDR inaddr;
+		/// <summary>
+		/// IP协议族 V4/V6
+		/// </summary>
+		Family family;
 	};//class IP
 
 }//namespace meet
