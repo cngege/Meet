@@ -20,6 +20,23 @@
 
 
 int main() {
+
+    meet::TCPClient c;
+    meet::Error connect_error;
+    if ((connect_error = c.connectV4("127.0.0.1", 3000)) != meet::Error::noError) {
+        std::cout << meet::getString(connect_error) << std::endl;
+        system("pause");
+        return 0;
+    }
+    meet::Error send_error;
+    if ((send_error = c.sendData(new char[] { 0x10, 0x11, 0x12, 0x13, 0x14 })) != meet::Error::noError) {
+        std::cout << meet::getString(connect_error) << std::endl;
+        system("pause");
+        return 0;
+    }
+    system("pause");
+    return 0;
+
     WSADATA wsaDat;
     meet::TCPServer s;
     s.initServer(wsaDat, 10, INADDR_ANY, 3000, 2, MAKEWORD(2, 2),
