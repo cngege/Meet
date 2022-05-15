@@ -76,6 +76,10 @@ namespace meet{
 			}
 			_connected = true;
 
+			// 将连接设为非阻塞模式 recv及时返回
+			u_long iMode = 1;
+			::ioctlsocket(_sockfd, FIONBIO, &iMode);
+
 			///Open a thread Triggers a listening event after receiving and processing a message
 			_recv_thread = std::thread(startRecv, this);
 			_recv_thread.detach();
@@ -174,6 +178,7 @@ namespace meet{
 		/// <param name="c">TCPClient Instance</param>
 		static void startRecv(TCPClient* c) {
 			if (!c->_connected){
+
 				char buffer[1024];
 				memset(buffer, 0, sizeof(buffer));
 
@@ -189,6 +194,7 @@ namespace meet{
 						if (recvbytecount == SOCKET_ERROR){
 							//Error while copying data
 							//Calling error callbacks
+							//printf("%d", recvbytecount);
 						}
 					}//if ((recvbytecount = recv(c->sockfd, buffer, sizeof(buffer), 0)) <= 0)
 
