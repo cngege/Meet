@@ -39,18 +39,19 @@ int main() {
 
     WSADATA wsaDat;
     meet::TCPServer s;
-    s.initServer(wsaDat, 10, INADDR_ANY, 3000, 2, MAKEWORD(2, 2),
-        [](
-            const IN_ADDR& addr,
-            unsigned short port,
-            const meet::TCPServer& server
-            )->meet::Error {
-                char sendBuf[20] = { '\0' };
-                std::cout << inet_ntop(AF_INET, (void*)&addr, sendBuf, 16) << std::endl;;
-                std::cout << port << std::endl;
-                return meet::Error::noError;
-        });
-    s.startServer();
+    std::cout <<"initServer->" << meet::getString(
+        s.initServer(true,wsaDat, 5, INADDR_ANY, 3000, 2, MAKEWORD(2, 2),
+            [](
+                const IN_ADDR& addr,
+                unsigned short port,
+                const meet::TCPServer::clientInfo& client
+                )->meet::Error {
+                    char sendBuf[20] = { '\0' };
+                    std::cout << "[" << std::this_thread::get_id() << "]" << inet_ntop(AF_INET, (void*)&addr, sendBuf, 16) << std::endl;
+                    std::cout << "[" << std::this_thread::get_id() << "]" << port << std::endl;
+                    return meet::Error::noError;
+            })) << std::endl;
+    std::cout << "startServer->" << meet::getString(s.startServer()) << std::endl;
     
     system("pause");
     return 0;
