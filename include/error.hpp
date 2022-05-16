@@ -38,7 +38,7 @@ namespace meet {
 		noConnected,
 		changeError,
 		theMaximumNumberOfConnectionsHasBeenReached,
-
+		theClientIsDisconnected
     };//enum class Error
 
 	static std::string getString(Error errorCode) {

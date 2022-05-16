@@ -48,15 +48,17 @@ namespace meet {
         /// <param name="socket"></param>
         /// <param name="onNewClientConnect"></param>
         TCPServer(
+            bool printCLog=false,
             int maxcou = 1,
             SOCKADDR_IN sockaddrin = {},
             SOCKET socket = NULL,
-            const std::function<Error(const IN_ADDR&, ushort, const clientInfo&)>& onNewClientConnect = [](const IN_ADDR&, ushort, const clientInfo&) ->Error {return Error::noError; }
+            const std::function<Error(const IN_ADDR&, ushort, const clientInfo&, const TCPServer*)>& onNewClientConnect = [](const IN_ADDR&, ushort, const clientInfo&, const TCPServer*) ->Error {return Error::noError; }
         ) :_onNewClientConnect(onNewClientConnect)
             , _socket(socket)
             , _Clinum(0)
             , _Maxcou(maxcou)
-            , _endServer(false) {
+            , _endServer(false)
+            , _printCLog(printCLog) {
             _sin.sin_family = 0;
             _sin.sin_port = htons(0);
             _sin.sin_addr.S_un.S_addr = 0;
@@ -86,7 +88,7 @@ namespace meet {
             ushort port = rand() % 65536,
             int iptype = AF_INET,
             ushort versionRequested = MAKEWORD(2, 2),
-            const std::function<Error(const IN_ADDR&, ushort, const clientInfo&)>& onNewClientConnect = [](const IN_ADDR&, ushort, const clientInfo&) ->Error {return Error::noError; }
+            const std::function<Error(const IN_ADDR&, ushort, const clientInfo&,const TCPServer*)>& onNewClientConnect = [](const IN_ADDR&, ushort, const clientInfo&, const TCPServer*) ->Error {return Error::noError; }
         ) {
             _Maxcou = maxcou;
             _onNewClientConnect = onNewClientConnect;
@@ -145,7 +147,7 @@ namespace meet {
                     
                     std::jthread t{
                         [&](TCPServer* _this,const IN_ADDR& addr, ushort port,const clientInfo& client) {
-                    _onNewClientConnect(addr,port,client);
+                    _onNewClientConnect(addr,port,client,_this);
                     closesocket(client.clientSocket);
                     _this->setClinum((_this->getClinum() - 1));
                     char sendBuf[20] = { '\0' };
@@ -157,7 +159,7 @@ namespace meet {
                         ci[_Clinum]
                     };
                     t.detach();
-                    LOG("Already for {0}:{1} start thread! Thread ID:{2}", ::inet_ntop(AF_INET, (void*)&remoteAddr.sin_addr, Buf, 16), remoteAddr.sin_port,t.get_id()._Id);
+                    LOG("Already for {0}:{1} start thread! ", ::inet_ntop(AF_INET, (void*)&remoteAddr.sin_addr, Buf, 16), remoteAddr.sin_port);
                     _Clinum++;
                     LOG("Number of current connections:{0}", _Clinum);
                 }//if (_Clinum < _Maxcou)
@@ -178,6 +180,7 @@ namespace meet {
         SOCKADDR_IN getSin() const {
             return _sin;
         }
+
         /// <summary>
         /// set SOCKADDR_IN
         /// </summary>
@@ -185,6 +188,7 @@ namespace meet {
         void setSin(SOCKADDR_IN sin) {
             _sin = sin;
         }
+
         /// <summary>
         /// get SOCKET
         /// </summary>
@@ -192,6 +196,7 @@ namespace meet {
         SOCKET getSocket() const {
             return _socket;
         }
+
         /// <summary>
         /// set SOCKET
         /// </summary>
@@ -199,6 +204,7 @@ namespace meet {
         int getMaxcou() const {
             return _Maxcou;
         }
+
         /// <summary>
         /// set Maxcou
         /// </summary>
@@ -206,20 +212,23 @@ namespace meet {
         void setMaxcou(int Maxcou) {
             _Maxcou = Maxcou;
         }
+
         /// <summary>
         /// get onNewClientConnect function
         /// </summary>
         /// <returns>onNewClientConnect function</returns>
-        std::function<Error(const IN_ADDR&, ushort, const clientInfo&)> getonNewClientConnect() const {
+        std::function<Error(const IN_ADDR&, ushort, const clientInfo&, const TCPServer*)> getonNewClientConnect() const {
             return _onNewClientConnect;
         }
+
         /// <summary>
         /// set get onNewClientConnect function
         /// </summary>
         /// <param name="onNewClientConnect">new get onNewClientConnect function</param>
-        void setonNewClientConnect(std::function<Error(const IN_ADDR&, ushort, const clientInfo&)> onNewClientConnect) {
+        void setonNewClientConnect(std::function<Error(const IN_ADDR&, ushort, const clientInfo&, const TCPServer*)> onNewClientConnect) {
             _onNewClientConnect = onNewClientConnect;
         }
+
         /// <summary>
         /// get _Clinum
         /// </summary>
@@ -227,6 +236,7 @@ namespace meet {
         int getClinum() const {
             return _Clinum;
         }
+
         /// <summary>
         /// 
         /// </summary>
@@ -234,10 +244,49 @@ namespace meet {
         void setClinum(int Clinum) {
             _Clinum = Clinum;
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        bool isEnd() const{
+            return _endServer;
+        }
+    public:
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="str"></param>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        static int send(std::string str, SOCKET s, int f = 0) {
+            return ::send(s, str.data(), sizeof(str.data()), f);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="s"></param>
+        /// <param name="buffsize"></param>
+        /// <param name="f"></param>
+        /// <returns></returns>
+        static Error recv(std::string& data, SOCKET s, int buffsize = 255,int f = 0) {
+            char* buff = new char[buffsize];
+            int ret = ::recv(s, buff, buffsize, f);
+            if (ret > 0){
+                data = buff;
+            }
+            else {
+                return Error::theClientIsDisconnected;
+            }
+            return Error::noError;
+        }
+
     protected:
     private:
     private:
-        std::function<Error(const IN_ADDR&, ushort, const clientInfo&)> _onNewClientConnect;
+        std::function<Error(const IN_ADDR&, ushort, const clientInfo&,const TCPServer*)> _onNewClientConnect;
         SOCKADDR_IN _sin;
         SOCKET _socket;
         int _Clinum;
