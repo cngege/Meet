@@ -21,6 +21,10 @@
 
 #define _S_ 1
 
+struct AAA {
+    std::string a;
+};
+
 int main() {
 #if _S_
     WSADATA wsaDat;
@@ -37,9 +41,10 @@ int main() {
                     std::cout << "[" << std::this_thread::get_id() << "]" << inet_ntop(AF_INET, (void*)&addr, sendBuf, 16) << std::endl;
                     std::cout << "[" << std::this_thread::get_id() << "]" << port << std::endl;
                     //meet::TCPServer::send("Hiiiiiii", client.clientSocket);
+
                     std::string dat;
-                    for (;;) {
-                        if (meet::TCPServer::recv(dat, client.clientSocket) == meet::Error::theClientIsDisconnected) {
+                    for (;;){
+                        if (meet::TCPServer::recv(dat, client.clientSocket,1024) == meet::Error::theClientIsDisconnected) {
                             std::cout << "[" << std::this_thread::get_id() << "]" << "Client " << inet_ntop(AF_INET, (void*)&addr, sendBuf, 16) <<":"<<port << " is disconnected" << std::endl;
                             return meet::Error::noError;
                         }

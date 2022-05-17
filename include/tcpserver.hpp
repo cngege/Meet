@@ -165,7 +165,7 @@ namespace meet {
                 }//if (_Clinum < _Maxcou)
                 else {
                     LOG("Error!The number of connections exceeded the maximum value:{0}", _Maxcou);
-                    return Error::theMaximumNumberOfConnectionsHasBeenReached;
+                    //return Error::theMaximumNumberOfConnectionsHasBeenReached;
                 }
             }//while (true)
             LOG("unkError!");
@@ -260,7 +260,7 @@ namespace meet {
         /// <param name="s"></param>
         /// <returns></returns>
         static int send(std::string str, SOCKET s, int f = 0) {
-            return ::send(s, str.data(), sizeof(str.data()), f);
+            return ::send(s, str.data(), str.length(), f);
         }
 
         /// <summary>

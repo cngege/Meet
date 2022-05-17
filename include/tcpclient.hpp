@@ -56,10 +56,10 @@ namespace meet{
 				return Error::unsupportedOperations;
 			}
 
-			//初始化套接字库
-			WSADATA wsadata; //定义一个WSADATA类型的结构体，存储被WSAStartup函数调用后返回的Windows Sockets数据
-			WORD sock_version = MAKEWORD(2, 0); //设置版本号
-			if (WSAStartup(sock_version, &wsadata)) //初始化套接字，启动构建，将“ws2_32.lib”加载到内存中
+			//Initializing the socket library
+			WSADATA wsadata; //Define a structure of type WSADATA to store the Windows Sockets data returned by the WSAStartup function call
+			WORD sock_version = MAKEWORD(2, 0); //Set the version number
+			if (WSAStartup(sock_version, &wsadata)) //Initialize the socket, start the build, and load "ws2_32.lib" into memory
 			{
 				return Error::initializationWinsockFailed;
 			}
@@ -76,7 +76,7 @@ namespace meet{
 			}
 			_connected = true;
 
-			// 将连接设为非阻塞模式 recv及时返回
+			// Set the connection to non-blocking mode recv return in time
 			u_long iMode = 1;
 			::ioctlsocket(_sockfd, FIONBIO, &iMode);
 
@@ -105,10 +105,10 @@ namespace meet{
 		/// <returns></returns>
 		Error connectV6(std::string ip, ushort port) {
 			hostent* ipaddrA = new hostent();
-			if (::inet_pton(AF_INET6, ip.c_str(), &ipaddrA->h_addr) != 1) //0:字符串不是有效的IP地址,-1:其他错误
+			if (::inet_pton(AF_INET6, ip.c_str(), &ipaddrA->h_addr) != 1) //0:String is not a valid IP address,-1:Other error
 			{
 				return Error::changeError;
-			};
+			}
 			IP ipaddrB(ipaddrA);
 			return connect(ipaddrB, port);
 		}
@@ -147,7 +147,7 @@ namespace meet{
 		};
 
 		/// <summary>
-		/// 发送字节
+		/// Sending bytes
 		/// </summary>
 		/// <param name="data"></param>
 		/// <returns></returns>
