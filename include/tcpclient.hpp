@@ -25,8 +25,19 @@ namespace meet{
 	/// 
 	/// </summary>
 	class TCPClient{
-		using DisConnectEvent = void(__fastcall*)();
 		using ushort = unsigned short;
+
+		/// <summary>
+		/// TCP断开连接时触发的事件
+		/// </summary>
+		using DisConnectEvent = void(__fastcall*)();
+
+		/// <summary>
+		/// 接收数据时触发的函数类型
+		/// </summary>
+		/// <param name="ULONG64">本次接收到的数据长度</param>
+		/// <param name="const char*">接收到的数据</param>
+		using RecvDataEvent = void(__fastcall*)(ULONG64, const char*);
 	public:
 		TCPClient(){}
 		~TCPClient(){
@@ -151,7 +162,7 @@ namespace meet{
 		/// </summary>
 		/// <param name="data"></param>
 		/// <returns></returns>
-		Error sendData(char* data) {
+		Error sendData(const char* data) {
 			if (!_connected) {
 				return Error::noConnected;
 			}
@@ -169,6 +180,14 @@ namespace meet{
 		void onDisConnect(DisConnectEvent disConnectEvent){
 			_disConnectEvent = disConnectEvent;
 		};
+
+		/// <summary>
+		/// Register callback events
+		/// </summary>
+		/// <param name="disConnectEvent"></param>
+		void onRecvData(RecvDataEvent recvDataEvent){
+			_recvDataEvent = recvDataEvent;
+		}
 
 	public:
 
@@ -198,9 +217,11 @@ namespace meet{
 						}
 					}//if ((recvbytecount = recv(c->sockfd, buffer, sizeof(buffer), 0)) <= 0)
 
-					if (recvbytecount < 5){
-						continue;
+					//接收数据 触发回调
+					else {
+						c->_recvDataEvent(recvbytecount, buffer);
 					}
+
 				}//while (c->connected)
 			}//if(!c->connected)
 		};//static void startRecv(TCPClient* c)
@@ -213,9 +234,14 @@ namespace meet{
 		std::thread _recv_thread;
 
 		/// <summary>
-		/// Event
+		/// 断开连接时触发的事件
 		/// </summary>
 		DisConnectEvent _disConnectEvent = NULL;
+
+		/// <summary>
+		/// 有数据达到时自动触发的事件
+		/// </summary>
+		RecvDataEvent _recvDataEvent = NULL;
 	};//class TCPClient
 
 }//namespace meet

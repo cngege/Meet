@@ -18,7 +18,7 @@
 #include <iostream>
 #include <chrono>
 
-#define _S_ 1
+#define _S_ 0
 
 struct AAA {
     std::string a;
@@ -58,6 +58,16 @@ int main() {
         std::cout << "startServer->" << meet::getString(s.startServer()) << std::endl;
 #else
     meet::TCPClient c;
+
+    c.onDisConnect([]() {
+        std::cout << "服务端断开了连接" << std::endl;
+    });
+
+    c.onRecvData([](ULONG64 len, const char* data) {
+        std::cout << "接收到了来自服务端的数据，共:" << len << "字节" << std::endl;
+        std::cout << data << std::endl;
+    });
+
     meet::Error connect_error;
     if ((connect_error = c.connectV4("127.0.0.1", 3000)) != meet::Error::noError) {
         std::cout << meet::getString(connect_error) << std::endl;
@@ -68,7 +78,9 @@ int main() {
         std::cout << "connectV4->127.0.0.1:3000" << std::endl;
     }
     meet::Error send_error;
-    if ((send_error = c.sendData(new char[] { 0x10, 0x11, 0x12, 0x13, 0x14 })) != meet::Error::noError) {
+    const char* expr = "Hello Meet";
+    
+    if ((send_error = c.sendData(expr)) != meet::Error::noError) {
         std::cout << meet::getString(connect_error) << std::endl;
         system("pause");
         return 0;
@@ -76,6 +88,8 @@ int main() {
     else {
         std::cout << "sendData->127.0.0.1:3000" << std::endl;
     }
+    std::string a;
+    std::getline(std::cin,a);
 #endif
     system("pause");
     return 0;
