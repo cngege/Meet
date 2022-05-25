@@ -152,7 +152,6 @@
     <ClInclude Include="..\include\meet">
       <FileType>Document</FileType>
     </ClInclude>
-    <ClInclude Include="..\third-party\nlohmann\json.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\ip.hpp" />
