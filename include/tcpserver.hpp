@@ -23,7 +23,8 @@
 #include <utility>
 #include <format>
 
-#define LOG(x,...) if(_printCLog){printf(std::format((std::string(x)+"\n"),__VA_ARGS__).data());}
+#define LOG(x,...) if(_printCLog){printf((std::format(x,__VA_ARGS__)+std::string("\n")).data());}
+
 #define LOGNON(...) if(_printCLog){printf(std::format(__VA_ARGS__).data());}
 
 namespace meet {
