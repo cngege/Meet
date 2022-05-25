@@ -30,6 +30,8 @@
 *.exe
 *.out
 *.app
+
+/x64
 /.vs
 /Meet/x64/Debug
 /build
