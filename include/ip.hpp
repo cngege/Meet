@@ -35,6 +35,9 @@ namespace meet
 		IPV6 = 1
 	};
 
+	/// <summary>
+	/// 废弃
+	/// </summary>
 	enum class DataType : byte {
 		TEXT = 0x01,
 		FILE = 0x02,
@@ -98,7 +101,7 @@ namespace meet
 		/// <summary>
 		/// IP协议族 V4/V6
 		/// </summary>
-		Family family;
+		Family family = Family::IPV4;
 	};//class IP
 
 }//namespace meet
