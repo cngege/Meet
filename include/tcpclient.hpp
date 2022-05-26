@@ -132,6 +132,7 @@ namespace meet{
 		/// <returns></returns>
 		Error disConnect(){
 			if (_connected && _sockfd && closesocket(_sockfd) == 0){
+				_connected = false;
 				return Error::noError;
 			}
 			return Error::unkError;
@@ -242,9 +243,6 @@ namespace meet{
 					else {
 						c->_recvDataEvent(recvbytecount, buffer);
 					}
-					printf(std::to_string(recvbytecount).c_str());
-					
-
 				}//while (c->connected)
 			}//if(!c->connected)
 		};//static void startRecv(TCPClient* c)
