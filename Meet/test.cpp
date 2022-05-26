@@ -67,8 +67,10 @@ void startClient() {
 
     //注册接收消息 回调
     c.onRecvData([](ULONG64 len, const char* data) {
-        std::cout << "接收到了来自服务端的数据，共:" << len << "字节" << std::endl;
+        std::cout << "\n[服务端 " << len << "字节]:";
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 9);
         std::cout << std::string(data) << std::endl;
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
         });
 
     meet::Error connect_error;
@@ -83,9 +85,12 @@ void startClient() {
 
     //根据输入来执行相应功能
     for (;;) {
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
         std::cout << "0 ---- 断开连接并退出客户端" << std::endl;
         std::cout << "1 ---- 发送文本" << std::endl;
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 3);
         std::cout << "请输入一个选项:";
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
         std::string cinput;
         std::getline(std::cin, cinput);
 
@@ -119,11 +124,14 @@ int main() {
 
     for (;;) {
         system("title Menu / 主菜单");
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 10);
         std::cout << "0 ---- 退出" << std::endl;
         std::cout << "1 ---- 开启服务端" << std::endl;
         std::cout << "2 ---- 开启客户端" << std::endl;
         std::cout << "3/cls ---- 清屏" << std::endl;
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 3);
         std::cout << "请输入一个选项:";
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
         std::string userinput;
         std::getline(std::cin, userinput);
         if (userinput == "0") {
