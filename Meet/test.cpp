@@ -59,6 +59,8 @@ void startServer(){
 
 void startClient() {
     meet::TCPClient c;
+    //关闭阻塞模式
+    c.setBlockingMode(false);
 
     //注册断开连接 回调
     c.onDisConnect([]() {
@@ -76,7 +78,6 @@ void startClient() {
     meet::Error connect_error;
     if ((connect_error = c.connectV4("127.0.0.1", 3000)) != meet::Error::noError) {
         std::cout << meet::getString(connect_error) << std::endl;
-        system("pause");
         return;
     }
     else {
@@ -106,8 +107,7 @@ void startClient() {
             //发送文本
             meet::Error send_error;
             if ((send_error = c.sendText(csendtext)) != meet::Error::noError) {
-                std::cout << meet::getString(connect_error) << std::endl;
-                system("pause");
+                std::cout << meet::getString(send_error) << std::endl;
                 return;
             }
             else {
