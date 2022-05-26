@@ -72,7 +72,7 @@ int main() {
 
         c.onRecvData([](ULONG64 len, const char* data) {
             std::cout << "接收到了来自服务端的数据，共:" << len << "字节" << std::endl;
-            std::cout << data << std::endl;
+            std::cout << std::string(data) << std::endl;
             });
 
         meet::Error connect_error;
@@ -97,6 +97,7 @@ int main() {
         }
         std::string a;
         std::getline(std::cin, a);
+        c.disConnect();
     }
 
     system("pause");
