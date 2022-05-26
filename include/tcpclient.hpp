@@ -42,6 +42,7 @@ namespace meet{
 		TCPClient(){}
 		~TCPClient(){
 			if (_sockfd){
+				shutdown(_sockfd, SD_BOTH);
 				closesocket(_sockfd);
 			}
 			_connected = false;
@@ -131,7 +132,11 @@ namespace meet{
 		/// </summary>
 		/// <returns></returns>
 		Error disConnect(){
-			if (_connected && _sockfd && closesocket(_sockfd) == 0){
+			if (!_connected) {
+				return Error::noConnected;
+			}
+			shutdown(_sockfd, SD_BOTH);
+			if (closesocket(_sockfd) == 0) {
 				_connected = false;
 				return Error::noError;
 			}
