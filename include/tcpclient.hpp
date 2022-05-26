@@ -88,8 +88,10 @@ namespace meet{
 			_connected = true;
 
 			// Set the connection to non-blocking mode recv return in time
-			u_long iMode = 1;
-			::ioctlsocket(_sockfd, FIONBIO, &iMode);
+			if (!_blockingmode) {
+				u_long iMode = 1;
+				::ioctlsocket(_sockfd, FIONBIO, &iMode);
+			}
 
 			///Open a thread Triggers a listening event after receiving and processing a message
 			_recv_thread = std::thread(startRecv, this);
@@ -145,12 +147,12 @@ namespace meet{
 				return Error::noConnected;
 			}
 			auto textlen = text.length();
-			auto sendbyte = new char[textlen + 10]; // textlen \n:1 + size_t:8 + datatype:1 = 10
-			memset(sendbyte, 0, textlen + 10);
-			memcpy(sendbyte, &textlen, sizeof(size_t));
-			sendbyte[8] = (byte)DataType::TEXT;
-			sprintf(sendbyte + 9,text.c_str());
-			auto sendcount = send(_sockfd, sendbyte, strlen(sendbyte), 0);
+			//auto sendbyte = new char[textlen + 10]; // textlen \n:1 + size_t:8 + datatype:1 = 10
+			//memset(sendbyte, 0, textlen + 10);
+			//memcpy(sendbyte, &textlen, sizeof(size_t));
+			//sendbyte[8] = (byte)DataType::TEXT;
+			//sprintf(sendbyte + 9,text.c_str());
+			auto sendcount = send(_sockfd, text.data(), text.length(), 0);
 			if (sendcount <= 0) {
 				return Error::sendFailed;
 			}
@@ -172,6 +174,20 @@ namespace meet{
 			}
 			return Error::noError;
 		};
+
+		/// <summary>
+		/// 设置阻塞模式,在连接前设置 默认为阻塞模式
+		/// </summary>
+		/// <param name="blocking">是否设置成阻塞模式</param>
+		/// <returns></returns>
+		Error setBlockingMode(bool blocking){
+			if (!_connected) {
+				_blockingmode = blocking;
+				return Error::noError;
+			}
+			return Error::connecting;
+		}
+
 
 		/// <summary>
 		/// Register callback events
@@ -196,7 +212,7 @@ namespace meet{
 		/// </summary>
 		/// <param name="c">TCPClient Instance</param>
 		static void startRecv(TCPClient* c) {
-			if (!c->_connected){
+			if (c->_connected){
 
 				char buffer[1024];
 				memset(buffer, 0, sizeof(buffer));
@@ -210,17 +226,24 @@ namespace meet{
 							c->_disConnectEvent();
 							break;
 						}
-						if (recvbytecount == SOCKET_ERROR){
-							//Error while copying data
-							//Calling error callbacks
-							//printf("%d", recvbytecount);
+
+						//阻塞模式
+						if (c->_blockingmode) {
+							if (recvbytecount == SOCKET_ERROR) {
+								//Error while copying data
+								//Calling error callbacks
+								//printf("%d", recvbytecount);
+							}
 						}
+
 					}//if ((recvbytecount = recv(c->sockfd, buffer, sizeof(buffer), 0)) <= 0)
 
 					//接收数据 触发回调
 					else {
 						c->_recvDataEvent(recvbytecount, buffer);
 					}
+					printf(std::to_string(recvbytecount).c_str());
+					
 
 				}//while (c->connected)
 			}//if(!c->connected)
@@ -229,6 +252,7 @@ namespace meet{
 		SOCKET _sockfd = NULL;
 		sockaddr_in _sock;
     	bool _connected = false;
+		bool _blockingmode = true;
 	    Family _family = Family::IPV4;
 
 		std::thread _recv_thread;
