@@ -216,7 +216,7 @@ namespace meet{
 			if (c->_connected){
 
 				char buffer[1024];
-				memset(buffer, 0, sizeof(buffer));
+				memset(buffer, '\0', sizeof(buffer));
 
 				while (c->_connected){
 					int recvbytecount;
@@ -242,6 +242,7 @@ namespace meet{
 					//接收数据 触发回调
 					else {
 						c->_recvDataEvent(recvbytecount, buffer);
+						memset(buffer, '\0', sizeof(buffer));
 					}
 				}//while (c->connected)
 			}//if(!c->connected)
