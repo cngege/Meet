@@ -153,11 +153,6 @@ namespace meet{
 				return Error::noConnected;
 			}
 			auto textlen = text.length();
-			//auto sendbyte = new char[textlen + 10]; // textlen \n:1 + size_t:8 + datatype:1 = 10
-			//memset(sendbyte, 0, textlen + 10);
-			//memcpy(sendbyte, &textlen, sizeof(size_t));
-			//sendbyte[8] = (byte)DataType::TEXT;
-			//sprintf(sendbyte + 9,text.c_str());
 			auto sendcount = send(_sockfd, text.data(), text.length(), 0);
 			if (sendcount <= 0) {
 				return Error::sendFailed;
