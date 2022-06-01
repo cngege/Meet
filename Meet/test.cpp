@@ -19,42 +19,45 @@
 #include <chrono>
 
 
-struct AAA {
-    std::string a;
-};
-
-
 void startServer(){
-    WSADATA wsaDat;
-    meet::TCPServer s(true);
-    std::cout << "initServer->" << meet::getString(
-        s.initServer(true, wsaDat, 5, INADDR_ANY, 3000, 2, MAKEWORD(2, 2),
-            [](
-                const IN_ADDR& addr,
-                unsigned short port,
-                const meet::TCPServer::clientInfo& client,
-                const meet::TCPServer* server
-                )->meet::Error {
-                    char sendBuf[20] = { '\0' };
-                    std::cout << "[" << std::this_thread::get_id() << "]" << inet_ntop(AF_INET, (void*)&addr, sendBuf, 16) << std::endl;
-                    std::cout << "[" << std::this_thread::get_id() << "]" << port << std::endl;
-                    meet::TCPServer::send("Hiiiiiii", client.clientSocket);
+    
+    meet::IP listenAddr(meet::Family::IPV4, "0.0.0.0");
+    meet::TCPServer s(listenAddr,3000,2);
 
-                    std::string dat;
-                    for (;;) {
-                        if (meet::TCPServer::recv(dat, client.clientSocket, 1024) == meet::Error::theClientIsDisconnected) {
-                            std::cout << "[" << std::this_thread::get_id() << "]" << "Client " << inet_ntop(AF_INET, (void*)&addr, sendBuf, 16) << ":" << port << " is disconnected" << std::endl;
-                            return meet::Error::noError;
-                        }
-                        if (server->isEnd()) {
-                            std::cout << "[" << std::this_thread::get_id() << "]" << "server is end" << std::endl;
-                            return meet::Error::noError;
-                        }
-                        std::cout << "[" << std::this_thread::get_id() << "]" << dat << std::endl;
-                    }
-                    return meet::Error::noError;
-            })) << std::endl;
-    std::cout << "startServer->" << meet::getString(s.startServer()) << std::endl;
+    s.onClientDisConnect([](meet::IP ip,USHORT port) {
+        printf("\n[%s:%d][连接] 断开连接\n", ip.toString(), port);
+    });
+
+    s.onNewClientConnect([](meet::IP ip, USHORT port, SOCKET socket) {
+        printf("\n[%s:%d][连接] 连接成功\n", ip.toString(), port);
+    });
+
+    s.onRecvData([](meet::IP ip, USHORT port, SOCKET socket,ULONG64 len,const char* data) {
+        printf("\n[%s:%d][数据][%d字节]:", ip.toString(),port,len);
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 9);
+        std::cout << std::string(data) << std::endl;
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
+    });
+
+    meet::Error listen_err = s.Listen();
+    if (listen_err != meet::Error::noError) {
+        std::cout << "监听错误:" << meet::getString(listen_err) << std::endl;
+        return;
+    }
+
+    for (;;) {
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
+        std::cout << "0 ---- 断开所有连接并退出服务端" << std::endl;
+        std::cout << "1 ---- 选择一个客户端,并进行操作" << std::endl;
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 3);
+        std::cout << "请输入一个选项:";
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
+        std::string sinput;
+        std::getline(std::cin, sinput);
+
+
+    }
+
 }
 
 void startClient() {
@@ -69,7 +72,7 @@ void startClient() {
 
     //注册接收消息 回调
     c.onRecvData([](ULONG64 len, const char* data) {
-        std::cout << "\n[服务端 " << len << "字节]:";
+        std::cout << "\n[来自服务端 " << len << "字节]:";
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 9);
         std::cout << std::string(data) << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);

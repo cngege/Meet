@@ -56,12 +56,12 @@ namespace meet
 		/// <param name="_host"></param>
 		IP(hostent* host){
 			if (host->h_addrtype == AF_INET) {
-				family = Family::IPV4;
+				IPFamily = Family::IPV4;
 			}
 			else if (host->h_addrtype == AF_INET6) {
-				family = Family::IPV6;
+				IPFamily = Family::IPV6;
 			}
-			memcpy(&inaddr, host->h_addr, host->h_length);
+			memcpy(&InAddr, host->h_addr, host->h_length);
 		};
 
 		/// <summary>
@@ -70,18 +70,45 @@ namespace meet
 		/// <param name="ipfamily">地址族</param>
 		/// <param name="addr">字符串ip地址</param>
 		IP(Family ipfamily,std::string addr) {
-			family = ipfamily;
+			IPFamily = ipfamily;
 			INT a = 10;
 			if (ipfamily == Family::IPV4){
-				a = ::inet_pton(AF_INET, addr.c_str(), &inaddr);
+				a = ::inet_pton(AF_INET, addr.c_str(), &InAddr);
 			}
 			else if (ipfamily == Family::IPV6){
-				a = ::inet_pton(AF_INET6, addr.c_str(), &inaddr);
+				a = ::inet_pton(AF_INET6, addr.c_str(), &InAddr);
 			}
+		}
+
+		IP(Family ipfamily, IN_ADDR inaddr) {
+			IPFamily = ipfamily;
+			InAddr = inaddr;
+		}
+
+		IP(sockaddr_in addr_in) {
+			IPFamily = (addr_in.sin_family == AF_INET) ? Family::IPV4 : Family::IPV6;;
+			InAddr = addr_in.sin_addr;
 		}
 	public:
 	public:
 	public:
+
+		/// <summary>
+		/// 将IP地址转为字符串输出
+		/// </summary>
+		/// <returns></returns>
+		std::string toString() {
+			
+			if (IPFamily == Family::IPV4) {
+				char IPStrBuf[INET_ADDRSTRLEN] = { '\0' };
+				return std::string(inet_ntop(AF_INET, (void*)&InAddr, IPStrBuf, sizeof(IPStrBuf)));
+			}
+			else{
+				char IPStrBuf[INET6_ADDRSTRLEN] = { '\0' };
+				return std::string(inet_ntop(AF_INET6, (void*)&InAddr, IPStrBuf, sizeof(IPStrBuf)));
+			}
+			
+		}
 
 	public:
 
@@ -97,11 +124,12 @@ namespace meet
 		/// <summary>
 		/// IN_ADDR格式的IP地址
 		/// </summary>
-		IN_ADDR inaddr;
+		IN_ADDR InAddr;
+		in_addr6 InAddr6;
 		/// <summary>
 		/// IP协议族 V4/V6
 		/// </summary>
-		Family family = Family::IPV4;
+		Family IPFamily = Family::IPV4;
 	};//class IP
 
 }//namespace meet

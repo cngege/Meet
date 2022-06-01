@@ -50,6 +50,7 @@ namespace meet{
 			if (_sockfd){
 				shutdown(_sockfd, SD_BOTH);
 				closesocket(_sockfd);
+				WSACleanup();
 			}
 			_connected = false;
 		}
@@ -68,9 +69,9 @@ namespace meet{
 			}
 			//Get IP address type v4/v6
 			memset(&_sock, 0, sizeof(_sock));
-			_family = ip.family;
-			_sock.sin_family = (ip.family == Family::IPV4) ? AF_INET : AF_INET6;
-			if (ip.family == Family::IPV6){
+			_family = ip.IPFamily;
+			_sock.sin_family = (ip.IPFamily == Family::IPV4) ? AF_INET : AF_INET6;
+			if (ip.IPFamily == Family::IPV6){
 				return Error::unsupportedOperations;
 			}
 
@@ -87,7 +88,7 @@ namespace meet{
 				return Error::socketError;
 			}
 			_sock.sin_port = htons(port);
-			_sock.sin_addr = ip.inaddr;
+			_sock.sin_addr = ip.InAddr;
 			if (::connect(_sockfd, (struct sockaddr*)&_sock, sizeof(_sock)) == INVALID_SOCKET){
 				closesocket(_sockfd);
 				return Error::connectFailed;
@@ -267,7 +268,7 @@ namespace meet{
 		};//static void startRecv(TCPClient* c)
 	private:
 		SOCKET _sockfd = NULL;
-		sockaddr_in _sock;
+		sockaddr_in _sock = {};
     	bool _connected = false;
 		bool _blockingmode = true;
 	    Family _family = Family::IPV4;
