@@ -50,8 +50,11 @@ namespace meet {
         //TODO 监听地址 监听端口 最大连接数量
         TCPServer(IP addr, ushort port, int maxConnect) :_listenAddr(addr), _listenPort(port), _maxCount(maxConnect) {}
         ~TCPServer() {
-            closesocket(_socket);
-            WSACleanup();
+            if (_socket) {
+                shutdown(_socket, SD_BOTH);
+                closesocket(_socket);
+                WSACleanup();
+            }
             _serverRunning = false;
         }
     public:

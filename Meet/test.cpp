@@ -72,10 +72,15 @@ void startServer(){
         }
         else if (sinput == "1") {
 
-            meet::TCPServer::ClientList* client;
+            meet::TCPServer::ClientList* client = nullptr;
             for (;;) {
                 int a = 0;
                 auto clientList = s.GetALLClient();
+                if (clientList.size() == 0) {
+                    std::cout << "当前没有客户端连接" << std::endl; 
+                    break;
+                }
+
                 std::cout << std::endl;
                 for (int i = 0; i < clientList.size(); i++) {
                     std::cout << i << " ========== [" << clientList.at(i).addr.toString() << ":" << clientList.at(i).port << "]" << std::endl;
@@ -89,11 +94,18 @@ void startServer(){
                     system("cls");
                     continue;
                 }
-                client = &clientList.at(x);
-                break;
+                if (x >= 0 && x < clientList.size()) {
+                    client = &clientList.at(x);
+                    break;
+                }
+
             }
 
             for (;;) {
+                if (s.GetALLClient().size() == 0) {
+                    break;
+                }
+
                 SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
                 std::cout << "当前选择的客户端是:[" << client->addr.toString() << ":" << client->port << "]" << std::endl;
                 std::cout << "0 ---- 断开这个客户端,并返回上一页" << std::endl;
@@ -189,7 +201,6 @@ void startClient() {
             meet::Error send_error;
             if ((send_error = c.sendText(csendtext)) != meet::Error::noError) {
                 std::cout << meet::getString(send_error) << std::endl;
-                return;
             }
         }
 
