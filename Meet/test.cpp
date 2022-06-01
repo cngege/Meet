@@ -24,16 +24,18 @@ void startServer(){
     meet::IP listenAddr(meet::Family::IPV4, "0.0.0.0");
     meet::TCPServer s(listenAddr,3000,2);
 
+    s.setBlockingMode(false);
+
     s.onClientDisConnect([](meet::IP ip,USHORT port) {
-        printf("\n[%s:%d][连接] 断开连接\n", ip.toString(), port);
+        printf("\n[%s:%d][连接] 断开连接\n", ip.toString().c_str(), port);
     });
 
     s.onNewClientConnect([](meet::IP ip, USHORT port, SOCKET socket) {
-        printf("\n[%s:%d][连接] 连接成功\n", ip.toString(), port);
+        printf("\n[%s:%d][连接] 连接成功\n", ip.toString().c_str(), port);
     });
 
     s.onRecvData([](meet::IP ip, USHORT port, SOCKET socket,ULONG64 len,const char* data) {
-        printf("\n[%s:%d][数据][%d字节]:", ip.toString(),port,len);
+        printf("\n[%s:%d][数据][%I64d字节]:", ip.toString().c_str(),port,len);
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 9);
         std::cout << std::string(data) << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
