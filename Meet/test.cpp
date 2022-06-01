@@ -24,7 +24,7 @@ void startServer(){
     meet::IP listenAddr(meet::Family::IPV4, "0.0.0.0");
     meet::TCPServer s(listenAddr,3000,2);
 
-    s.setBlockingMode(false);
+    s.setBlockingMode(true);
 
     s.onClientDisConnect([](meet::IP ip,USHORT port) {
         printf("\n[%s:%d][连接] 断开连接\n", ip.toString().c_str(), port);
@@ -57,6 +57,82 @@ void startServer(){
         std::string sinput;
         std::getline(std::cin, sinput);
 
+        if (sinput == "0") {
+            auto clientList = s.GetALLClient();
+            int discount = 0;
+            size_t clientcount = clientList.size();
+            
+            for (auto c : clientList) {
+                if (s.disClientConnect(c.addr, c.port) == meet::Error::noError) {
+                    discount++;
+                }
+            }
+            std::cout << "共成功断开了 " << discount << "/" << clientcount << " 个客户端的连接" << std::endl;
+            break;
+        }
+        else if (sinput == "1") {
+
+            meet::TCPServer::ClientList* client;
+            for (;;) {
+                int a = 0;
+                auto clientList = s.GetALLClient();
+                std::cout << std::endl;
+                for (int i = 0; i < clientList.size(); i++) {
+                    std::cout << i << " ========== [" << clientList.at(i).addr.toString() << ":" << clientList.at(i).port << "]" << std::endl;
+                }
+                std::cout << "请输入一个序号选择一个客户端:";
+                std::string sinput_client;
+                std::getline(std::cin, sinput_client);
+
+                int x = atoi(sinput_client.c_str());
+                if (x == 0 && sinput_client != "0") {
+                    system("cls");
+                    continue;
+                }
+                client = &clientList.at(x);
+                break;
+            }
+
+            for (;;) {
+                SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
+                std::cout << "当前选择的客户端是:[" << client->addr.toString() << ":" << client->port << "]" << std::endl;
+                std::cout << "0 ---- 断开这个客户端,并返回上一页" << std::endl;
+                std::cout << "1 ---- 返回上一页" << std::endl;
+                std::cout << "2 ---- 发送消息" << std::endl;
+                std::cout << "3/cls ---- 清屏" << std::endl;
+                SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 3);
+                std::cout << "请输入一个选项:";
+                SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
+                std::string sinput_setup;
+                std::getline(std::cin, sinput_setup);
+                if (sinput_setup == "0") {
+                    meet::Error err  = s.disClientConnect(client->addr, client->port);
+                    if (err != meet::Error::noError) {
+                        std::cout << "客户端断开失败:" << meet::getString(err) << std::endl;
+                    }
+                    break;
+                }
+                else if (sinput_setup == "1") {
+                    break;
+                }
+                else if (sinput_setup == "2") {
+                    std::cout << "请输入你要发送的文本:";
+                    std::string ssendtext;
+                    std::getline(std::cin, ssendtext);
+
+                    meet::Error err;
+                    if ((err = s.sendText(client->clientSocket,ssendtext)) != meet::Error::noError) {
+                        std::cout << "发送消息出现错误" << meet::getString(err) << std::endl;
+                    }
+                }
+                else if (sinput_setup == "3" || sinput_setup == "cls") {
+                    system("cls");
+                }
+
+            }
+
+
+        }
 
     }
 
@@ -114,9 +190,6 @@ void startClient() {
             if ((send_error = c.sendText(csendtext)) != meet::Error::noError) {
                 std::cout << meet::getString(send_error) << std::endl;
                 return;
-            }
-            else {
-                std::cout << "sendData->127.0.0.1:3000" << std::endl;
             }
         }
 

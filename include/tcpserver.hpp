@@ -23,6 +23,7 @@
 #include <utility>
 #include <format>
 #include <thread>
+#include <list>
 
 namespace meet {
 
@@ -41,13 +42,13 @@ namespace meet {
         typedef struct ClientS
         {
             SOCKET clientSocket;
+            IP addr;
+            ushort port;
         }ClientList;
 
     public:
         //TODO 监听地址 监听端口 最大连接数量
-        TCPServer(IP addr, ushort port, int maxConnect) :_listenAddr(addr), _listenPort(port), _maxCount(maxConnect) {
-            _clientList = new ClientList[maxConnect];
-        }
+        TCPServer(IP addr, ushort port, int maxConnect) :_listenAddr(addr), _listenPort(port), _maxCount(maxConnect) {}
         ~TCPServer() {
             closesocket(_socket);
             WSACleanup();
@@ -99,11 +100,10 @@ namespace meet {
                         continue;
                     }
 
-                    if (_clientCount < _maxCount) {
-                        _clientList[_clientCount].clientSocket = c_socket;  //这里有问题  后面改为列表
+                    if (_clientList.size() < _maxCount) {
 
-                        //客户端连接数 计数加1
-                        _clientCount++;
+                        ClientList newClient = { .clientSocket = c_socket, .addr = IP(remoteAddr) , .port = remoteAddr.sin_port };
+                        _clientList.push_back(newClient);
 
                         //创建线程 监听客户端传来的消息
                         auto _recv_thread = std::thread([this, c_socket, remoteAddr]() {
@@ -118,7 +118,7 @@ namespace meet {
                                 if ((recvbytecount = ::recv(c_socket, buffer, sizeof(buffer), 0)) <= 0) {
                                     //Return 0 Network Outage
                                     if (recvbytecount == 0) {
-                                        _clientCount--;
+                                        removeClientFromClientList(ipaddr,port);
                                         if (_onClientDisConnectEvent != NULL) {
                                             _onClientDisConnectEvent(ipaddr,port);
                                         }
@@ -183,20 +183,46 @@ namespace meet {
         }
 
         /// <summary>
+        /// 从客户端列表中移除客户端信息
+        /// </summary>
+        /// <param name="addr"></param>
+        /// <param name="port"></param>
+        /// <returns></returns>
+        Error removeClientFromClientList(IP addr,ushort port) {
+            for (auto it = _clientList.begin(); it != _clientList.end(); it++) {
+                if ((*it).addr.toString() == addr.toString() && (*it).port == port) {		// 条件语句
+                    _clientList.erase(it);		// 移除他
+                    it--;		                    // 让该迭代器指向前一个
+                    return Error::noError;
+                }
+            }
+            return Error::noFoundClient;
+        }
+
+
+
+        /// <summary>
         /// 断开客户端的连接
         /// </summary>
-        /// <param name="socket"></param>
+        /// <param name="addr"></param>
+        /// <param name="port"></param>
         /// <returns></returns>
-        Error disClientConnect(SOCKET socket) {
+        Error disClientConnect(IP addr,ushort port) {
             if (!_serverRunning) {
                 return Error::serverNotStarted;
             }
-            shutdown(socket, SD_BOTH);
-            if (closesocket(socket) == 0) {
-                _clientCount--;
-                return Error::noError;
+            for (auto c : _clientList) {
+                if (addr.toString() == c.addr.toString() && port == c.port) {
+                    shutdown(c.clientSocket, SD_BOTH);
+                    if (closesocket(c.clientSocket) == 0) {
+                        removeClientFromClientList(addr, port);
+                        //循环 
+                        return Error::noError;
+                    }
+                    return Error::unkError;
+                }
             }
-            return Error::unkError;
+            return Error::noFoundClient;
         };
 
 
@@ -267,6 +293,14 @@ namespace meet {
             return Error::noError;
         };
 
+        /// <summary>
+        /// 获取所有已连接的客户端
+        /// </summary>
+        /// <returns></returns>
+        std::vector<ClientList> GetALLClient() {
+            return _clientList;
+        }
+        
 
     protected:
     private:
@@ -295,11 +329,6 @@ namespace meet {
         SOCKET _socket;
 
         /// <summary>
-        /// 已经连接的客户端数量
-        /// </summary>
-        int _clientCount;
-
-        /// <summary>
         /// 接收消息阻塞模式
         /// </summary>
         bool _blockingMode = true;
@@ -307,7 +336,7 @@ namespace meet {
         /// <summary>
         /// 连接的客户端列表
         /// </summary>
-        ClientList* _clientList;
+        std::vector<ClientList> _clientList;
         
         /// <summary>
         /// 标志，防止重复初始化， 服务端是否启动
