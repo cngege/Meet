@@ -138,14 +138,6 @@ namespace meet {
                         clientPort = remoteAddr.sin6_port;
                     }
 
-
-                    //sockaddr remoteAddr;
-                    //int nAddrlen = sizeof(remoteAddr);
-                    //SOCKET c_socket = ::accept(_socket, &remoteAddr, &nAddrlen); //默认应该会在这里阻塞
-                    //if (c_socket == INVALID_SOCKET) {   //无效的套接字
-                    //    continue;
-                    //}
-
                     if (_clientList.size() < _maxCount) {
 
                         ClientList newClient = { .clientSocket = c_socket, .addr = clientAddress , .port = clientPort };

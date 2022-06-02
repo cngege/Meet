@@ -67,10 +67,8 @@ namespace meet{
 			if (_connected){
 				return Error::connecting;
 			}
-			//Get IP address type v4/v6
-			memset(&_sock, 0, sizeof(_sock));
+			
 			_family = ip.IPFamily;
-			_sock.sa_family = (ADDRESS_FAMILY)ip.IPFamily;
 
 			//Initializing the socket library
 			WSADATA wsadata; //Define a structure of type WSADATA to store the Windows Sockets data returned by the WSAStartup function call
@@ -81,22 +79,31 @@ namespace meet{
 			}
 
 			//Create sockets
-			if ((_sockfd = socket(_sock.sa_family, SOCK_STREAM, IPPROTO_TCP)) == SOCKET_ERROR){
+			if ((_sockfd = socket((ADDRESS_FAMILY)ip.IPFamily, SOCK_STREAM, IPPROTO_TCP)) == SOCKET_ERROR) {
 				return Error::socketError;
 			}
+
 			if (ip.IPFamily == Family::IPV4) {
-				((struct sockaddr_in*)&_sock)->sin_port = htons(port);
-				((struct sockaddr_in*)&_sock)->sin_addr = ip.InAddr;
+				memset(&_sock4, 0, sizeof(_sock4));
+				_sock4.sin_family = (ADDRESS_FAMILY)ip.IPFamily;
+				_sock4.sin_port = htons(port);
+				_sock4.sin_addr = ip.InAddr;
+				if (::connect(_sockfd, (struct sockaddr*)& _sock4, sizeof(_sock4)) == INVALID_SOCKET) {
+					closesocket(_sockfd);
+					return Error::connectFailed;
+				}
 			}
 			else {
-				((struct sockaddr_in6*)&_sock)->sin6_port = htons(port);
-				((struct sockaddr_in6*)&_sock)->sin6_addr = ip.InAddr6;
+				memset(&_sock6, 0, sizeof(_sock6));
+				_sock6.sin6_family = (ADDRESS_FAMILY)ip.IPFamily;
+				_sock6.sin6_port = htons(port);
+				_sock6.sin6_addr = ip.InAddr6;
+				if (::connect(_sockfd, (struct sockaddr*)&_sock6, sizeof(_sock6)) == INVALID_SOCKET) {
+					closesocket(_sockfd);
+					return Error::connectFailed;
+				}
 			}
 
-			if (::connect(_sockfd, &_sock, sizeof(_sock)) == INVALID_SOCKET){
-				closesocket(_sockfd);
-				return Error::connectFailed;
-			}
 			_connected = true;
 
 			// Set the connection to non-blocking mode recv return in time
@@ -276,7 +283,8 @@ namespace meet{
 
 	private:
 		SOCKET _sockfd = NULL;
-		sockaddr _sock = {};
+		struct sockaddr_in _sock4 = {};
+		struct sockaddr_in6 _sock6 = {};
     	bool _connected = false;
 		bool _blockingmode = true;
 	    Family _family = Family::IPV4;
