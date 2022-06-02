@@ -68,25 +68,35 @@ namespace meet {
             if (WSAStartup(_versionRequested, &_wsaDat) != 0) {
                 return Error::initializationWinsockFailed;
             }
-            memset(&_sock, 0, sizeof(_sock));
-            _sock.sa_family = (ADDRESS_FAMILY)_listenAddr.IPFamily;
 
-            _socket = socket(_sock.sa_family, SOCK_STREAM, IPPROTO_TCP);
-            if (_socket == INVALID_SOCKET) {
-                return Error::socketError;
-            }
-
-            if (_listenAddr.IPFamily == Family::IPV4) {
-                ((struct sockaddr_in*)&_sock)->sin_port = htons(_listenPort);
-                ((struct sockaddr_in*)&_sock)->sin_addr = _listenAddr.InAddr;
-            }
-            else {
-                ((struct sockaddr_in6*)&_sock)->sin6_port = htons(_listenPort);
-                ((struct sockaddr_in6*)&_sock)->sin6_addr = _listenAddr.InAddr6;
-            }
-
-            if (::bind(_socket, (LPSOCKADDR)&_sock, sizeof(_sock)) == SOCKET_ERROR) {
-                return Error::bindError;
+            // 分IP协议 对本地地址进行绑定
+            {
+                if (_listenAddr.IPFamily == Family::IPV4) {
+                    memset(&_sock4, 0, sizeof(struct sockaddr_in));
+                    _sock4.sin_family = (ADDRESS_FAMILY)_listenAddr.IPFamily;
+                    _sock4.sin_port = htons(_listenPort);
+                    _sock4.sin_addr = _listenAddr.InAddr;
+                    _socket = socket((ADDRESS_FAMILY)_listenAddr.IPFamily, SOCK_STREAM, IPPROTO_TCP);
+                    if (_socket == INVALID_SOCKET) {
+                        return Error::socketError;
+                    }
+                    if (::bind(_socket, (sockaddr*)&_sock4, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
+                        return Error::bindError;
+                    }
+                }
+                else {
+                    memset(&_sock6, 0, sizeof(struct sockaddr_in6));
+                    _sock6.sin6_family = (ADDRESS_FAMILY)_listenAddr.IPFamily;
+                    _sock6.sin6_port = htons(_listenPort);
+                    _sock6.sin6_addr = _listenAddr.InAddr6;
+                    _socket = socket((ADDRESS_FAMILY)_listenAddr.IPFamily, SOCK_STREAM, IPPROTO_TCP);
+                    if (_socket == INVALID_SOCKET) {
+                        return Error::socketError;
+                    }
+                    if (::bind(_socket, (sockaddr*)&_sock6, sizeof(struct sockaddr_in6)) == SOCKET_ERROR) {
+                        return Error::bindError;
+                    }
+                }
             }
 
             if (::listen(_socket, _maxCount) == SOCKET_ERROR) {
@@ -103,29 +113,46 @@ namespace meet {
             //创建一个线程 接收客户端的连接
             auto _connect_thread = std::thread([this]() {
                 while (_serverRunning) {
-                    sockaddr remoteAddr;
-                    int nAddrlen = sizeof(remoteAddr);
-                    SOCKET c_socket = ::accept(_socket, &remoteAddr, &nAddrlen); //默认应该会在这里阻塞
-                    if (c_socket == INVALID_SOCKET) {   //无效的套接字
-                        continue;
+
+                    SOCKET c_socket;
+                    IP clientAddress;
+                    ushort clientPort = 0;
+                    if (_listenAddr.IPFamily == Family::IPV4) {
+                        struct sockaddr_in remoteAddr;
+                        int nAddrlen = sizeof(remoteAddr);
+                        c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
+                        if (c_socket == INVALID_SOCKET) {   //无效的套接字
+                            continue;
+                        }
+                        clientAddress = IP(remoteAddr);
+                        clientPort = remoteAddr.sin_port;
+                    }
+                    else {
+                        struct sockaddr_in6 remoteAddr;
+                        int nAddrlen = sizeof(remoteAddr);
+                        c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
+                        if (c_socket == INVALID_SOCKET) {   //无效的套接字
+                            continue;
+                        }
+                        clientAddress = IP(remoteAddr);
+                        clientPort = remoteAddr.sin6_port;
                     }
 
-                    if (_clientList.size() < _maxCount) {
 
-                        IP clientAddress(remoteAddr);
-                        ushort clientPort = 0;
-                        if (remoteAddr.sa_family == AF_INET) {
-                            clientPort = ((struct sockaddr_in*)&remoteAddr)->sin_port;
-                        }
-                        else {
-                            clientPort = ((struct sockaddr_in6*)&remoteAddr)->sin6_port;
-                        }
+                    //sockaddr remoteAddr;
+                    //int nAddrlen = sizeof(remoteAddr);
+                    //SOCKET c_socket = ::accept(_socket, &remoteAddr, &nAddrlen); //默认应该会在这里阻塞
+                    //if (c_socket == INVALID_SOCKET) {   //无效的套接字
+                    //    continue;
+                    //}
+
+                    if (_clientList.size() < _maxCount) {
 
                         ClientList newClient = { .clientSocket = c_socket, .addr = clientAddress , .port = clientPort };
                         _clientList.push_back(newClient);
 
                         //创建线程 监听客户端传来的消息
-                        auto _recv_thread = std::thread([this, c_socket, remoteAddr, clientAddress, clientPort]() {
+                        auto _recv_thread = std::thread([this, c_socket, clientAddress, clientPort]() {
                             char buffer[1024];
                             memset(buffer, '\0', sizeof(buffer));
                             while (_serverRunning) {
@@ -333,7 +360,8 @@ namespace meet {
         WSADATA _wsaDat;
         ushort _versionRequested = MAKEWORD(2, 2);
 
-        sockaddr _sock = {};
+        struct sockaddr_in _sock4 = {};
+        struct sockaddr_in6 _sock6 = {};
 
         /// <summary>
         /// 服务端监听会话
