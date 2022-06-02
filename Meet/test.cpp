@@ -168,25 +168,40 @@ void startClient() {
         });
 
     // 手动设置连接服务端的地址端口
+    std::string ip_input, fm_input;
+    USHORT port;
     for (;;) {
-        std::cout << "请输入要连接服务端的地址IP地址(默认127.0.0.1:3000)：";
-        std::string ip_input;
+        std::cout << "请分别输入要连接服务端的地址,端口,协议(4/6)(默认127.0.0.1:3000)：";
+        std::string port_input;
         std::getline(std::cin, ip_input);
-        if (ip_input == "0")
-        {
-            return;
-        }else if (ip_input == "")
-        {
+        if (ip_input == "" || ip_input == "0") {
+            //按默认的来连接
+            ip_input = "127.0.0.1";
+            port = 3000;
+            fm_input = "4";
             break;
         }
-
-        std::cout << meet::IP::getaddrinfo(meet::Family::IPV6, "[2408:8000:c000::8888]").toString() << std::endl;
-        return;
+        std::cout << "端口:";
+        std::getline(std::cin, port_input);
+        std::cout << "协议:";
+        std::getline(std::cin, fm_input);
+        
+        auto p = atoi(port_input.c_str());
+        if (p == 0 && port_input != "0" || p >= 65535 || p <= 0) {
+            system("cls");
+            std::cout << "端口错了" << std::endl;
+            continue;
+        }
+        port = p;
+        break;
     }
 
 
     meet::Error connect_error;
-    if ((connect_error = c.connectV4("127.0.0.1", 3000)) != meet::Error::noError) {
+    meet::IP connIp = meet::IP::getaddrinfo((fm_input == "6") ? meet::Family::IPV6 : meet::Family::IPV4, ip_input);
+
+
+    if ((connect_error = c.connect(connIp, port)) != meet::Error::noError) {
         std::cout << meet::getString(connect_error) << std::endl;
         return;
     }

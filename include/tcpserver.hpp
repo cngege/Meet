@@ -167,7 +167,6 @@ namespace meet {
                             _onNewClientConnectEvent(clientAddress, clientPort, c_socket);
                         }
                         
-
                     }
                     else {
                         // 连接总数超过限制 断开这个客户端的连接
