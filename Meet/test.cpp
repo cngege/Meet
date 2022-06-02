@@ -18,7 +18,6 @@
 #include <iostream>
 #include <chrono>
 
-
 void startServer(){
     
     meet::IP listenAddr(meet::Family::IPV4, "0.0.0.0");
@@ -167,6 +166,24 @@ void startClient() {
         std::cout << std::string(data) << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
         });
+
+    // 手动设置连接服务端的地址端口
+    for (;;) {
+        std::cout << "请输入要连接服务端的地址IP地址(默认127.0.0.1:3000)：";
+        std::string ip_input;
+        std::getline(std::cin, ip_input);
+        if (ip_input == "0")
+        {
+            return;
+        }else if (ip_input == "")
+        {
+            break;
+        }
+
+        std::cout << meet::IP::getaddrinfo(meet::Family::IPV6, "[2408:8000:c000::8888]").toString() << std::endl;
+        return;
+    }
+
 
     meet::Error connect_error;
     if ((connect_error = c.connectV4("127.0.0.1", 3000)) != meet::Error::noError) {

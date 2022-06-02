@@ -70,9 +70,12 @@ namespace meet{
 			//Get IP address type v4/v6
 			memset(&_sock, 0, sizeof(_sock));
 			_family = ip.IPFamily;
-			_sock.sin_family = (ip.IPFamily == Family::IPV4) ? AF_INET : AF_INET6;
-			if (ip.IPFamily == Family::IPV6){
-				return Error::unsupportedOperations;
+			_sock.sa_family = (ADDRESS_FAMILY)ip.IPFamily;
+			if (ip.IPFamily == Family::IPV4){
+				
+			}
+			else {
+
 			}
 
 			//Initializing the socket library
@@ -84,12 +87,19 @@ namespace meet{
 			}
 
 			//Create sockets
-			if ((_sockfd = socket(_sock.sin_family, SOCK_STREAM, IPPROTO_TCP)) == SOCKET_ERROR){
+			if ((_sockfd = socket(_sock.sa_family, SOCK_STREAM, IPPROTO_TCP)) == SOCKET_ERROR){
 				return Error::socketError;
 			}
-			_sock.sin_port = htons(port);
-			_sock.sin_addr = ip.InAddr;
-			if (::connect(_sockfd, (struct sockaddr*)&_sock, sizeof(_sock)) == INVALID_SOCKET){
+			if (ip.IPFamily == Family::IPV4) {
+				((struct sockaddr_in*)&_sock)->sin_port = htons(port);
+				((struct sockaddr_in*)&_sock)->sin_addr = ip.InAddr;
+			}
+			else {
+				((struct sockaddr_in6*)&_sock)->sin6_port = htons(port);
+				((struct sockaddr_in6*)&_sock)->sin6_addr = ip.InAddr6;
+			}
+
+			if (::connect(_sockfd, &_sock, sizeof(_sock)) == INVALID_SOCKET){
 				closesocket(_sockfd);
 				return Error::connectFailed;
 			}
@@ -268,7 +278,7 @@ namespace meet{
 		};//static void startRecv(TCPClient* c)
 	private:
 		SOCKET _sockfd = NULL;
-		sockaddr_in _sock = {};
+		sockaddr _sock = {};
     	bool _connected = false;
 		bool _blockingmode = true;
 	    Family _family = Family::IPV4;

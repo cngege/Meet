@@ -31,8 +31,9 @@ namespace meet
 	/// IP地址类型
 	/// </summary>
 	enum class Family{
-		IPV4 = 0,
-		IPV6 = 1
+		UNSPEC = 0,
+		IPV4 = 2,
+		IPV6 = 23
 	};
 
 	/// <summary>
@@ -57,18 +58,19 @@ namespace meet
 		IP(hostent* host){
 			if (host->h_addrtype == AF_INET) {
 				IPFamily = Family::IPV4;
+				memcpy(&InAddr, host->h_addr, host->h_length);
 			}
 			else if (host->h_addrtype == AF_INET6) {
 				IPFamily = Family::IPV6;
+				memcpy(&InAddr6, host->h_addr, host->h_length);
 			}
-			memcpy(&InAddr, host->h_addr, host->h_length);
 		};
 
 		/// <summary>
 		/// 
 		/// </summary>
 		/// <param name="ipfamily">地址族</param>
-		/// <param name="addr">字符串ip地址</param>
+		/// <param name="addr">字符串ip地址(不能使用域名)</param>
 		IP(Family ipfamily,std::string addr) {
 			IPFamily = ipfamily;
 			INT a = 10;
@@ -77,17 +79,32 @@ namespace meet
 			}
 			else if (ipfamily == Family::IPV6){
 				a = ::inet_pton(AF_INET6, addr.c_str(), &InAddr);
+				::inet_pton(AF_INET6, addr.c_str(), &InAddr6);
 			}
 		}
 
-		IP(Family ipfamily, IN_ADDR inaddr) {
-			IPFamily = ipfamily;
+		IP(IN_ADDR inaddr) {
+			IPFamily = Family::IPV4;
 			InAddr = inaddr;
 		}
 
+		IP(in_addr6 inaddr) {
+			IPFamily = Family::IPV6;
+			InAddr6 = inaddr;
+		}
+
 		IP(sockaddr_in addr_in) {
-			IPFamily = (addr_in.sin_family == AF_INET) ? Family::IPV4 : Family::IPV6;;
+			IPFamily = Family::IPV4;
 			InAddr = addr_in.sin_addr;
+		}
+
+		IP(sockaddr_in6 addr_in) {
+			IPFamily = Family::IPV6;
+			InAddr6 = addr_in.sin6_addr;
+		}
+
+		IP() {
+			IP(Family::IPV4, "0.0.0.0");
 		}
 	public:
 	public:
@@ -105,7 +122,7 @@ namespace meet
 			}
 			else{
 				char IPStrBuf[INET6_ADDRSTRLEN] = { '\0' };
-				return std::string(inet_ntop(AF_INET6, (void*)&InAddr, IPStrBuf, sizeof(IPStrBuf)));
+				return std::string(inet_ntop(AF_INET6, (void*)&InAddr6, IPStrBuf, sizeof(IPStrBuf)));
 			}
 			
 		}
@@ -113,18 +130,55 @@ namespace meet
 	public:
 
 		/// <summary>
-		/// Get IP host information from hostname
+		/// Get IP host information from hostname 废弃
 		/// </summary>
 		/// <param name="hostname">host.</param>
 		/// <returns></returns>
 		static hostent* gethostbyname(std::string hostname) {
 			return gethostbyname(hostname.c_str());
 		}
+
+
+		static IP getaddrinfo(Family f,std::string dom) {
+			WSADATA wsadata; //Define a structure of type WSADATA to store the Windows Sockets data returned by the WSAStartup function call
+			if (WSAStartup(MAKEWORD(2, 0), &wsadata)) //Initialize the socket, start the build, and load "ws2_32.lib" into memory
+			{
+				return NULL;
+			}
+			struct addrinfo hints;
+			memset(&hints, 0, sizeof(struct addrinfo));
+			hints.ai_family = (int)f;     /* Allow IPv4 */
+			hints.ai_flags = AI_CANONNAME;/* For wildcard IP address */
+			hints.ai_protocol = 0;         /* Any protocol */
+			hints.ai_socktype = SOCK_STREAM;
+
+			struct addrinfo *res;
+			auto ret = ::getaddrinfo(dom.c_str(), NULL, &hints, &res);
+			if (ret == -1 || res == nullptr) {
+				WSACleanup();
+				return NULL;
+			}
+			WSACleanup();
+			IP retipaddr;
+			if (f == Family::IPV6) {
+				retipaddr = IP(*(struct sockaddr_in6*)(res->ai_addr));
+			}
+			else {
+				retipaddr = IP(*(struct sockaddr_in*)(res->ai_addr));
+			}
+			freeaddrinfo(res);
+			return retipaddr;
+		}
+
 	public:
 		/// <summary>
-		/// IN_ADDR格式的IP地址
+		/// IN_ADDR格式的IPV4地址
 		/// </summary>
-		IN_ADDR InAddr;
+		in_addr InAddr;
+
+		/// <summary>
+		/// in_addr6格式的IPV6地址
+		/// </summary>
 		in_addr6 InAddr6;
 		/// <summary>
 		/// IP协议族 V4/V6

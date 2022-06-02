@@ -68,17 +68,17 @@ namespace meet {
             if (WSAStartup(_versionRequested, &_wsaDat) != 0) {
                 return Error::initializationWinsockFailed;
             }
-            memset(&_sin, 0, sizeof(_sin));
-            _sin.sin_family = (_listenAddr.IPFamily == Family::IPV4) ? AF_INET : AF_INET6;
+            memset(&_sock, 0, sizeof(_sock));
+            _sock.sin_family = (_listenAddr.IPFamily == Family::IPV4) ? AF_INET : AF_INET6;
 
-            _socket = socket(_sin.sin_family, SOCK_STREAM, IPPROTO_TCP);
+            _socket = socket(_sock.sin_family, SOCK_STREAM, IPPROTO_TCP);
             if (_socket == INVALID_SOCKET) {
                 return Error::socketError;
             }
-            _sin.sin_port = htons(_listenPort);
-            _sin.sin_addr = _listenAddr.InAddr;
+            _sock.sin_port = htons(_listenPort);
+            _sock.sin_addr = _listenAddr.InAddr;
 
-            if (::bind(_socket, (LPSOCKADDR)&_sin, sizeof(_sin)) == SOCKET_ERROR) {
+            if (::bind(_socket, (LPSOCKADDR)&_sock, sizeof(_sock)) == SOCKET_ERROR) {
                 return Error::bindError;
             }
 
@@ -112,8 +112,7 @@ namespace meet {
                         auto _recv_thread = std::thread([this, c_socket, remoteAddr]() {
                             char buffer[1024];
                             memset(buffer, '\0', sizeof(buffer));
-                            Family ipf = (remoteAddr.sin_family == AF_INET) ? Family::IPV4 : Family::IPV6;
-                            IP ipaddr(ipf, remoteAddr.sin_addr);
+                            IP ipaddr(remoteAddr.sin_addr);
                             ushort port = remoteAddr.sin_port;
 
                             while (_serverRunning) {
@@ -152,8 +151,7 @@ namespace meet {
 
                         //触发有客户端连接的回调
                         if (_onNewClientConnectEvent != NULL) {
-                            Family ipf = (remoteAddr.sin_family == AF_INET)?Family::IPV4 : Family::IPV6;
-                            IP ipaddr(ipf, remoteAddr.sin_addr);
+                            IP ipaddr(remoteAddr.sin_addr);
                             _onNewClientConnectEvent(ipaddr, remoteAddr.sin_port, c_socket);
                         }
                         
@@ -324,7 +322,7 @@ namespace meet {
         WSADATA _wsaDat;
         ushort _versionRequested = MAKEWORD(2, 2);
 
-        sockaddr_in _sin = {};
+        sockaddr_in _sock = {};
 
         /// <summary>
         /// 服务端监听会话
