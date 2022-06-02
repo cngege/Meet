@@ -71,12 +71,6 @@ namespace meet{
 			memset(&_sock, 0, sizeof(_sock));
 			_family = ip.IPFamily;
 			_sock.sa_family = (ADDRESS_FAMILY)ip.IPFamily;
-			if (ip.IPFamily == Family::IPV4){
-				
-			}
-			else {
-
-			}
 
 			//Initializing the socket library
 			WSADATA wsadata; //Define a structure of type WSADATA to store the Windows Sockets data returned by the WSAStartup function call

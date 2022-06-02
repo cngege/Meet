@@ -93,6 +93,16 @@ namespace meet
 			InAddr6 = inaddr;
 		}
 
+		IP(sockaddr addr) {
+			IPFamily = Family::IPV4;
+			if (addr.sa_family == AF_INET) {
+				InAddr = ((struct sockaddr_in*)&addr)->sin_addr;
+			}
+			else {
+				InAddr6 = ((struct sockaddr_in6*)&addr)->sin6_addr;
+			}
+		}
+
 		IP(sockaddr_in addr_in) {
 			IPFamily = Family::IPV4;
 			InAddr = addr_in.sin_addr;
