@@ -20,7 +20,8 @@
 
 void startServer(){
     
-    meet::IP listenAddr(meet::Family::IPV4, "0.0.0.0");
+    meet::IP listenAddr(meet::Family::IPV6, "::");
+    //meet::IP listenAddr = meet::IP::getaddrinfo(meet::Family::IPV4, "0.0.0.0");
     meet::TCPServer s(listenAddr,3000,2);
 
     s.setBlockingMode(true);
@@ -202,11 +203,8 @@ void startClient() {
 
 
     if ((connect_error = c.connect(connIp, port)) != meet::Error::noError) {
-        std::cout << meet::getString(connect_error) << std::endl;
+        std::cout << "连接错误:" << meet::getString(connect_error) << std::endl;
         return;
-    }
-    else {
-        std::cout << "connectV4->127.0.0.1:3000" << std::endl;
     }
 
     //根据输入来执行相应功能
