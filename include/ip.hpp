@@ -73,12 +73,10 @@ namespace meet
 		/// <param name="addr">字符串ip地址(不能使用域名)</param>
 		IP(Family ipfamily,std::string addr) {
 			IPFamily = ipfamily;
-			INT a = 10;
 			if (ipfamily == Family::IPV4){
-				a = ::inet_pton(AF_INET, addr.c_str(), &InAddr);
+				::inet_pton(AF_INET, addr.c_str(), &InAddr);
 			}
 			else if (ipfamily == Family::IPV6){
-				a = ::inet_pton(AF_INET6, addr.c_str(), &InAddr);
 				::inet_pton(AF_INET6, addr.c_str(), &InAddr6);
 			}
 		}
@@ -94,11 +92,12 @@ namespace meet
 		}
 
 		IP(sockaddr addr) {
-			IPFamily = Family::IPV4;
 			if (addr.sa_family == AF_INET) {
+				IPFamily = Family::IPV4;
 				InAddr = ((struct sockaddr_in*)&addr)->sin_addr;
 			}
 			else {
+				IPFamily = Family::IPV6;
 				InAddr6 = ((struct sockaddr_in6*)&addr)->sin6_addr;
 			}
 		}
@@ -138,16 +137,6 @@ namespace meet
 		}
 
 	public:
-
-		/// <summary>
-		/// Get IP host information from hostname 废弃
-		/// </summary>
-		/// <param name="hostname">host.</param>
-		/// <returns></returns>
-		static hostent* gethostbyname(std::string hostname) {
-			return gethostbyname(hostname.c_str());
-		}
-
 
 		static IP getaddrinfo(Family f,std::string dom) {
 			WSADATA wsadata; //Define a structure of type WSADATA to store the Windows Sockets data returned by the WSAStartup function call
