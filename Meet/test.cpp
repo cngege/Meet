@@ -20,22 +20,59 @@
 
 void startServer(){
     
-    meet::IP listenAddr(meet::Family::IPV6, "::");
+    meet::Family fa = meet::Family::IPV4;
+    USHORT port = 3000;
+    int maxconn = 5;
+    std::cout << "请输入你要监听地址的协议(4/6):";
+    std::string fa_input;
+    std::getline(std::cin, fa_input);
+    if (fa_input == "" || fa_input == "0") {
+        std::cout << "将使用默认项(0.0.0.0 : 3000  maxconnect 5)" << std::endl;
+    }
+    else {
+        if (fa_input == "6") {
+            fa = meet::Family::IPV6;
+        }
+        std::cout << "请输入你要监听端口:";
+        std::string port_input;
+        std::getline(std::cin, port_input);
+        auto p = atoi(port_input.c_str());
+        if (p >= 65535 || p <= 0) {
+            std::cout << "输入的端口有问题" << std::endl;
+            return;
+        }
+        port = p;
+
+        std::cout << "请输入最大允许连接的客户端数量:";
+        std::string count_input;
+        std::getline(std::cin, count_input);
+        auto count = atoi(count_input.c_str());
+        if (count <= 0) {
+            std::cout << "你乱输什么啊,我替你选吧,就……10个吧" << std::endl;
+            maxconn = 10;
+        }
+        else {
+            maxconn = count;
+        }
+
+    }
+
+    meet::IP listenAddr(fa, (fa==meet::Family::IPV4)?"0.0.0.0":"::");
     //meet::IP listenAddr = meet::IP::getaddrinfo(meet::Family::IPV4, "0.0.0.0");
-    meet::TCPServer s(listenAddr,3000,2);
+    meet::TCPServer s(listenAddr, port, maxconn);
 
     s.setBlockingMode(true);
 
     s.onClientDisConnect([](meet::IP ip,USHORT port) {
-        printf("\n[%s:%d][连接] 断开连接\n", ip.toString().c_str(), port);
+        printf("\n[%s -:- %d][连接] 断开连接\n", ip.toString().c_str(), port);
     });
 
     s.onNewClientConnect([](meet::IP ip, USHORT port, SOCKET socket) {
-        printf("\n[%s:%d][连接] 连接成功\n", ip.toString().c_str(), port);
+        printf("\n[%s -:- %d][连接] 连接成功\n", ip.toString().c_str(), port);
     });
 
     s.onRecvData([](meet::IP ip, USHORT port, SOCKET socket,ULONG64 len,const char* data) {
-        printf("\n[%s:%d][数据][%I64d字节]:", ip.toString().c_str(),port,len);
+        printf("\n[%s -:- %d][数据][%I64d字节]:", ip.toString().c_str(),port,len);
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 9);
         std::cout << std::string(data) << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
@@ -172,7 +209,8 @@ void startClient() {
     std::string ip_input, fm_input;
     USHORT port;
     for (;;) {
-        std::cout << "请分别输入要连接服务端的地址,端口,协议(4/6)(默认127.0.0.1:3000)：";
+        std::cout << "请分别输入要连接服务端的地址,端口,协议(4/6)(默认127.0.0.1:3000)" << std::endl;
+        std::cout << "地址(请确保可以解析,否则会崩溃):";
         std::string port_input;
         std::getline(std::cin, ip_input);
         if (ip_input == "" || ip_input == "0") {
@@ -188,7 +226,7 @@ void startClient() {
         std::getline(std::cin, fm_input);
         
         auto p = atoi(port_input.c_str());
-        if (p == 0 && port_input != "0" || p >= 65535 || p <= 0) {
+        if (p >= 65535 || p <= 0) {
             system("cls");
             std::cout << "端口错了" << std::endl;
             continue;
