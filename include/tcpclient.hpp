@@ -234,7 +234,7 @@ namespace meet{
 		static void startRecv(TCPClient* c) {
 			if (c->_connected){
 
-				char buffer[1024];
+				char buffer[RecvBuffSize];
 				memset(buffer, '\0', sizeof(buffer));
 
 				while (c->_connected){
@@ -270,6 +270,10 @@ namespace meet{
 				}//while (c->connected)
 			}//if(!c->connected)
 		};//static void startRecv(TCPClient* c)
+
+	public:
+		static const int RecvBuffSize = 1024;
+
 	private:
 		SOCKET _sockfd = NULL;
 		sockaddr _sock = {};
