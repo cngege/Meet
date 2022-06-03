@@ -173,12 +173,12 @@ namespace meet
 		/// <summary>
 		/// IN_ADDR格式的IPV4地址
 		/// </summary>
-		in_addr InAddr;
+		in_addr InAddr = {};
 
 		/// <summary>
 		/// in_addr6格式的IPV6地址
 		/// </summary>
-		in_addr6 InAddr6;
+		in_addr6 InAddr6 = {};
 		/// <summary>
 		/// IP协议族 V4/V6
 		/// </summary>
