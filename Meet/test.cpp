@@ -16,7 +16,11 @@
 
 #include "../include/meet"
 #include <iostream>
+#include <fstream>
 #include <chrono>
+
+meet::TCPServer s;
+meet::TCPClient c;
 
 void startServer(){
     
@@ -57,10 +61,6 @@ void startServer(){
 
     }
 
-    meet::IP listenAddr(fa, (fa==meet::Family::IPV4)?"0.0.0.0":"::");
-    //meet::IP listenAddr = meet::IP::getaddrinfo(meet::Family::IPV4, "0.0.0.0");
-    meet::TCPServer s(listenAddr, port, maxconn);
-
     s.setBlockingMode(true);
 
     s.onClientDisConnect([](meet::IP ip,USHORT port) {
@@ -78,7 +78,9 @@ void startServer(){
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
     });
 
-    meet::Error listen_err = s.Listen();
+    meet::IP listenAddr(fa, (fa == meet::Family::IPV4) ? "0.0.0.0" : "::");
+    //meet::IP listenAddr = meet::IP::getaddrinfo(meet::Family::IPV4, "0.0.0.0");
+    meet::Error listen_err = s.Listen(listenAddr, port, maxconn);
     if (listen_err != meet::Error::noError) {
         std::cout << "监听错误:" << meet::getString(listen_err) << std::endl;
         return;
@@ -105,6 +107,7 @@ void startServer(){
                 }
             }
             std::cout << "共成功断开了 " << discount << "/" << clientcount << " 个客户端的连接" << std::endl;
+            s.~TCPServer();
             break;
         }
         else if (sinput == "1") {
@@ -159,6 +162,7 @@ void startServer(){
                     if (err != meet::Error::noError) {
                         std::cout << "客户端断开失败:" << meet::getString(err) << std::endl;
                     }
+                    c.~TCPClient();
                     break;
                 }
                 else if (sinput_setup == "1") {
@@ -188,7 +192,7 @@ void startServer(){
 }
 
 void startClient() {
-    meet::TCPClient c;
+    
     //关闭阻塞模式
     c.setBlockingMode(false);
 
@@ -250,6 +254,8 @@ void startClient() {
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
         std::cout << "0 ---- 断开连接并退出客户端" << std::endl;
         std::cout << "1 ---- 发送文本" << std::endl;
+        std::cout << "2 ---- 发送文件" << std::endl;
+        std::cout << "3 ---- 接收文件" << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 3);
         std::cout << "请输入一个选项:";
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
@@ -270,6 +276,20 @@ void startClient() {
             if ((send_error = c.sendText(csendtext)) != meet::Error::noError) {
                 std::cout << meet::getString(send_error) << std::endl;
             }
+        }
+        else if (cinput == "2") {
+            std::cout << "请确保对方准备好接收文件" << std::endl;
+            std::cout << "请输入文件名:";
+            std::string csendfile;
+            std::getline(std::cin, csendfile);
+
+            //发送文件
+            std::ifstream sf(csendfile.c_str());
+            if (!sf.good()) {
+                std::cout << "文件不存在,请仔细确认" << std::endl;
+                break;
+            }
+            
         }
 
     }
