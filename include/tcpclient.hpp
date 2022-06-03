@@ -52,7 +52,7 @@ namespace meet{
 				closesocket(_sockfd);
 				WSACleanup();
 			}
-			_connected = false;
+			Connected = false;
 		}
 	public:
 	public:
@@ -64,7 +64,7 @@ namespace meet{
 		/// <param name="port">port</param>
 		/// <returns></returns>
 		Error connect(IP ip, ushort port) {
-			if (_connected){
+			if (Connected){
 				return Error::connecting;
 			}
 			
@@ -104,7 +104,7 @@ namespace meet{
 				}
 			}
 
-			_connected = true;
+			Connected = true;
 
 			// Set the connection to non-blocking mode recv return in time
 			if (!_blockingmode) {
@@ -150,12 +150,12 @@ namespace meet{
 		/// </summary>
 		/// <returns></returns>
 		Error disConnect(){
-			if (!_connected) {
+			if (!Connected) {
 				return Error::noConnected;
 			}
 			shutdown(_sockfd, SD_BOTH);
 			if (closesocket(_sockfd) == 0) {
-				_connected = false;
+				Connected = false;
 				return Error::noError;
 			}
 			return Error::unkError;
@@ -167,7 +167,7 @@ namespace meet{
 		/// <param name="text">Text to be sent</param>
 		/// <returns></returns>
 		Error sendText(std::string text) {
-			if (!_connected) {
+			if (!Connected) {
 				return Error::noConnected;
 			}
 			auto textlen = text.length();
@@ -175,9 +175,14 @@ namespace meet{
 				return Error::dataTooLong;		// 长度不能超过Int的最大值
 			}
 			int len = static_cast<int>(textlen);
-			auto sendcount = send(_sockfd, text.data(), len, 0);
-			if (sendcount <= 0) {
-				return Error::sendFailed;
+			char* p = text.data();
+			while (len > 0) {
+				int sendcount = send(_sockfd, p, len, 0);
+				if (sendcount < 0) {
+					return Error::sendFailed;
+				}
+				len -= sendcount;
+				p += sendcount;
 			}
 			return Error::noError;
 		};
@@ -187,17 +192,19 @@ namespace meet{
 		/// </summary>
 		/// <param name="data"></param>
 		/// <returns></returns>
-		Error sendData(const char* data) {
-			if (!_connected) {
+		Error sendData(char* data, int size) {
+			if (!Connected) {
 				return Error::noConnected;
 			}
-			if (strlen(data) > INT_MAX) {
-				return Error::dataTooLong;		// 长度不能超过Int的最大值
-			}
-			int len = static_cast<int>(strlen(data));
-			auto sendcount = send(_sockfd, data, len, 0);
-			if (sendcount <= 0) {
-				return Error::sendFailed;
+			char* p = data;
+			int len = size;
+			while (len > 0) {
+				int sendcount = send(_sockfd, p, len, 0);
+				if (sendcount < 0) {				// 等于0 表示剩余缓冲区空间不足,要等待协议将数据发送完
+					return Error::sendFailed;
+				}
+				len -= sendcount;
+				p += sendcount;
 			}
 			return Error::noError;
 		};
@@ -208,7 +215,7 @@ namespace meet{
 		/// <param name="blocking">是否设置成阻塞模式</param>
 		/// <returns></returns>
 		Error setBlockingMode(bool blocking){
-			if (!_connected) {
+			if (!Connected) {
 				_blockingmode = blocking;
 				return Error::noError;
 			}
@@ -247,17 +254,17 @@ namespace meet{
 		/// </summary>
 		/// <param name="c">TCPClient Instance</param>
 		static void startRecv(TCPClient* c) {
-			if (c->_connected){
+			if (c->Connected){
 
 				char buffer[RecvBuffSize];
-				memset(buffer, '\0', sizeof(buffer));
+				memset(buffer, '\0', RecvBuffSize);
 
-				while (c->_connected){
+				while (c->Connected){
 					int recvbytecount;
-					if ((recvbytecount = recv(c->_sockfd, buffer, sizeof(buffer), 0)) <= 0){
+					if ((recvbytecount = recv(c->_sockfd, buffer, RecvBuffSize, 0)) <= 0){
 						//Return 0 Network Outage
 						if (recvbytecount == 0){
-							c->_connected = false;
+							c->Connected = false;
 							if (c->_disConnectEvent != NULL) {
 								c->_disConnectEvent();
 							}
@@ -280,7 +287,7 @@ namespace meet{
 						if (c->_recvDataEvent != NULL) {
 							c->_recvDataEvent(recvbytecount, buffer);
 						}
-						memset(buffer, '\0', sizeof(buffer));
+						memset(buffer, '\0', RecvBuffSize);
 					}
 				}//while (c->connected)
 			}//if(!c->connected)
@@ -288,12 +295,13 @@ namespace meet{
 
 	public:
 		static const int RecvBuffSize = 1024;
+		bool Connected = false;
 
 	private:
 		SOCKET _sockfd = NULL;
 		struct sockaddr_in _sock4 = {};
 		struct sockaddr_in6 _sock6 = {};
-    	bool _connected = false;
+    	
 		bool _blockingmode = true;
 	    Family _family = Family::IPV4;
 

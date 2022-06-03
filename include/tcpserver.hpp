@@ -315,9 +315,14 @@ namespace meet {
                 return Error::dataTooLong;		// 长度不能超过Int的最大值
             }
             int len = static_cast<int>(textlen);
-            auto sendcount = send(socket, text.data(), len, 0);
-            if (sendcount <= 0) {
-                return Error::sendFailed;
+            char* p = text.data();
+            while (len > 0) {
+                int sendcount = send(socket, p, len, 0);
+                if (sendcount < 0) {
+                    return Error::sendFailed;
+                }
+                len -= sendcount;
+                p += sendcount;
             }
             return Error::noError;
         };
@@ -327,17 +332,20 @@ namespace meet {
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        Error sendData(SOCKET socket, const char* data) {
+        Error sendData(SOCKET socket, char* data, int size) {
             if (!_serverRunning) {
                 return Error::serverNotStarted;
             }
-            if (strlen(data) > INT_MAX) {
-                return Error::dataTooLong;		// 长度不能超过Int的最大值
-            }
-            int len = static_cast<int>(strlen(data));
-            auto sendcount = send(socket, data, len, 0);
-            if (sendcount <= 0) {
-                return Error::sendFailed;
+            char* p = data;
+            int len = size;
+            while (len > 0) {
+                int sendcount = send(socket, p, len, 0);
+                if (sendcount < 0) {
+                    return Error::sendFailed;
+                }
+                //printf("发送的字节数:%d\n", sendcount);
+                len -= sendcount;
+                p += sendcount;
             }
             return Error::noError;
         };
