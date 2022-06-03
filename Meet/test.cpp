@@ -207,7 +207,7 @@ void startServer(){
                                 }
                                 char* tempStr = new char[1024];
                                 sf.read(tempStr, 1024);
-                                int readsize = sf.gcount();
+                                int readsize = static_cast<int>(sf.gcount());
 
                                 meet::Error sendFileErr = s.sendData(client.clientSocket,tempStr, readsize);
                                 if (sendFileErr != meet::Error::noError) {
@@ -236,6 +236,7 @@ void startServer(){
                             if (ServerWriteFile) {
                                 ServerWriteFileIO.close();
                                 ServerWriteFile = false;
+                                std::cout << "文件已经保存" << std::endl;
                             }
                         }
                         else if (sinput_setup == "6" || sinput_setup == "cls") {
@@ -368,7 +369,7 @@ void startClient() {
                 }
                 char* tempStr = new char[1024];
                 sf.read(tempStr, 1024);
-                int readsize = sf.gcount();
+                int readsize = static_cast<int>(sf.gcount());
 
                 meet::Error sendFileErr = c.sendData(tempStr, readsize);
                 if (sendFileErr != meet::Error::noError) {
