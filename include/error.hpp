@@ -41,7 +41,8 @@ namespace meet {
 		theClientIsDisconnected,
 		serverIsStarted = 100,
 		serverNotStarted = 101,
-		noFoundClient
+		noFoundClient,
+		dataTooLong
     };//enum class Error
 
 	static std::string getString(Error errorCode) {
@@ -106,6 +107,9 @@ namespace meet {
 		}
 		case noFoundClient: {
 			return "noFoundClient";
+		}
+		case dataTooLong: {
+			return "dataTooLong";
 		}
 		default: {
 			return "Error! unk errorCode!";

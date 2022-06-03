@@ -171,7 +171,11 @@ namespace meet{
 				return Error::noConnected;
 			}
 			auto textlen = text.length();
-			auto sendcount = send(_sockfd, text.data(), text.length(), 0);
+			if (textlen > INT_MAX) {
+				return Error::dataTooLong;		// 长度不能超过Int的最大值
+			}
+			int len = static_cast<int>(textlen);
+			auto sendcount = send(_sockfd, text.data(), len, 0);
 			if (sendcount <= 0) {
 				return Error::sendFailed;
 			}
@@ -187,7 +191,11 @@ namespace meet{
 			if (!_connected) {
 				return Error::noConnected;
 			}
-			auto sendcount = send(_sockfd, data, strlen(data), 0);
+			if (strlen(data) > INT_MAX) {
+				return Error::dataTooLong;		// 长度不能超过Int的最大值
+			}
+			int len = static_cast<int>(strlen(data));
+			auto sendcount = send(_sockfd, data, len, 0);
 			if (sendcount <= 0) {
 				return Error::sendFailed;
 			}

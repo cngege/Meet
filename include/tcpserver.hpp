@@ -48,7 +48,7 @@ namespace meet {
 
     public:
         //TODO 监听地址 监听端口 最大连接数量
-        TCPServer(IP addr, ushort port, int maxConnect) :_listenAddr(addr), _listenPort(port), _maxCount(maxConnect) {}
+        TCPServer(){}
         ~TCPServer() {
             if (_socket) {
                 shutdown(_socket, SD_BOTH);
@@ -59,11 +59,21 @@ namespace meet {
         }
     public:
 
-
-        Error Listen() {
+        /// <summary>
+        /// 开始监听设备地址和端口
+        /// </summary>
+        /// <param name="listenAddress">监听的IP地址</param>
+        /// <param name="listenPort">监听的端口</param>
+        /// <param name="maxConnectCount">允许的最大客户端连接数量</param>
+        /// <returns></returns>
+        Error Listen(IP listenAddress, ushort listenPort, int maxConnectCount) {
             if (_serverRunning) {
                 return Error::serverIsStarted;
             }
+
+            _listenAddr = listenAddress;
+            _listenPort = listenPort;
+            _maxCount = maxConnectCount;
 
             if (WSAStartup(_versionRequested, &_wsaDat) != 0) {
                 return Error::initializationWinsockFailed;
@@ -301,7 +311,11 @@ namespace meet {
                 return Error::serverNotStarted;
             }
             auto textlen = text.length();
-            auto sendcount = send(socket, text.data(), text.length(), 0);
+            if (textlen > INT_MAX) {
+                return Error::dataTooLong;		// 长度不能超过Int的最大值
+            }
+            int len = static_cast<int>(textlen);
+            auto sendcount = send(socket, text.data(), len, 0);
             if (sendcount <= 0) {
                 return Error::sendFailed;
             }
@@ -317,7 +331,11 @@ namespace meet {
             if (!_serverRunning) {
                 return Error::serverNotStarted;
             }
-            auto sendcount = send(socket, data, strlen(data), 0);
+            if (strlen(data) > INT_MAX) {
+                return Error::dataTooLong;		// 长度不能超过Int的最大值
+            }
+            int len = static_cast<int>(strlen(data));
+            auto sendcount = send(socket, data, len, 0);
             if (sendcount <= 0) {
                 return Error::sendFailed;
             }
