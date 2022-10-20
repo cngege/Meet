@@ -142,7 +142,7 @@ namespace meet{
 		/// <param name="ip">Remote host ipv6 address, such as "2000:0:0:0:0:0:0:0:1"</param>
 		/// <param name="port">Remote host port</param>
 		/// <returns></returns>
-		Error connectV6(std::string ip, ushort port) {
+		Error connectV6(const std::string& ip, ushort port) {
 			return connect(ip, port);
 		}
 
