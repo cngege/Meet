@@ -60,7 +60,7 @@ c.setBlockingMode(false);
 
 // 设置回调与设置阻塞模式完成之后,便是建立连接
 c.connectV4("127.0.0.1", 3000)
-//c.connectV6()
+//c.connectV6("::1", 3000)
 //c.connect()
 // 返回公共类型 meet::Error, 判断返回的是否是 Error::noError 以判断是否连接成功
 
@@ -81,8 +81,8 @@ TcpServer s(IP,ushort,int);
 
 //然后是设置阻塞和非阻塞模式
 //设置回调
-s.onClientDisConnect([](meet::IP ip,USHORT port) {
-   printf("\n[%s:%d][连接] 断开连接\n", ip.toString().c_str(), port);
+s.onClientDisConnect([](meet::TCPServer::MeetClient meetClient) {
+   printf("\n[%s -:- %d][连接] 断开连接\n", meetClient.addr.toString().c_str(), meetClient.port);
 });
 
 // 然后就是开启监听
@@ -91,7 +91,7 @@ s.Listen();
 // 来判断是否监听成功
 
 //获取所有连接的客户端
-std::vector<ClientList> GetALLClient()
+std::vector<MeetClient> GetALLClient()
 
 // 断开客户端的连接
 Error disClientConnect(IP addr,ushort port)
