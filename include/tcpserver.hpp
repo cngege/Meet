@@ -39,10 +39,8 @@ namespace meet {
     /// 
     /// </summary>
     class TCPServer {
-        //using ushort = unsigned short;
-        //using ulong = unsigned long;
     public:
-        typedef struct MeetClient
+        struct MeetClient
         {
             SOCKET clientSocket;
             IP addr;
@@ -57,12 +55,12 @@ namespace meet {
         //TODO 监听地址 监听端口 最大连接数量
         TCPServer(){}
         ~TCPServer() {
+            _serverRunning = false;
             if (_socket) {
                 shutdown(_socket, SD_BOTH);
                 closesocket(_socket);
                 WSACleanup();
             }
-            _serverRunning = false;
         }
     public:
 
