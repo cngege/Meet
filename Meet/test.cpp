@@ -93,7 +93,7 @@ void startServer(){
 
     });
 
-    meet::IP listenAddr(fa, (fa == meet::Family::IPV4) ? "0.0.0.0" : "::");
+    meet::IP listenAddr((fa == meet::Family::IPV4) ? "0.0.0.0" : "::");
     //meet::IP listenAddr = meet::IP::getaddrinfo(meet::Family::IPV4, "0.0.0.0");
     meet::Error listen_err = s.Listen(listenAddr, port, maxconn);
     if (listen_err != meet::Error::noError) {
@@ -138,6 +138,7 @@ void startServer(){
                 for (int i = 0; i < clientList.size(); i++) {
                     std::cout << i << " ========== [" << clientList.at(i).addr.toString() << ":" << clientList.at(i).port << "]" << std::endl;
                 }
+                std::cout << clientList.size() << " ========== [返回上一页] " << std::endl;
                 std::cout << "请输入一个序号选择一个客户端:";
                 std::string sinput_client;
                 std::getline(std::cin, sinput_client);
@@ -146,6 +147,9 @@ void startServer(){
                 if (x == 0 && sinput_client != "0") {
                     system("cls");
                     continue;
+                }
+                if (x == clientList.size()) {
+                    break;
                 }
                 if (x >= 0 && x < clientList.size()) {
                     // 控制台输入选择了一个客户端
@@ -166,6 +170,10 @@ void startServer(){
                         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
                         std::string sinput_setup;
                         std::getline(std::cin, sinput_setup);
+                        if (clientList.at(x).clientSocket != client.clientSocket) {
+                            std::cout << "该客户端的连接早已断开" << std::endl;
+                            break;
+                        }
                         if (sinput_setup == "0") {
                             meet::Error err = s.disClientConnect(client.addr, client.port);
                             if (err != meet::Error::noError) {
@@ -315,7 +323,6 @@ void startClient() {
     meet::Error connect_error;
     meet::IP connIp = meet::IP::getaddrinfo((fm_input == "6") ? meet::Family::IPV6 : meet::Family::IPV4, ip_input);
 
-
     if ((connect_error = c.connect(connIp, port)) != meet::Error::noError) {
         std::cout << "连接错误:" << meet::getString(connect_error) << std::endl;
         return;
@@ -388,7 +395,7 @@ void startClient() {
                 int readsize = static_cast<int>(sf.gcount());
 
                 meet::Error sendFileErr = c.sendData(tempStr, readsize);
-                delete tempStr;
+                delete[] tempStr;
                 if (sendFileErr != meet::Error::noError) {
                     std::cout << "发送文件发生错误:" << meet::getString(sendFileErr) << std::endl;
                     break;

@@ -131,9 +131,9 @@ namespace meet{
 		/// <param name="ip">Remote host ipv4 address, e.g. "127.0.0.1"</param>
 		/// <param name="port">Remote host port</param>
 		/// <returns></returns>
-		Error connectV4(std::string ip, ushort port) {
-			IP ipaddrB(Family::IPV4,ip);
-			return connect(ipaddrB, port);
+		Error connectV4(const std::string& ip, ushort port) {
+			//IP ipaddrB(Family::IPV4,ip);
+			return connect(ip, port);
 		}
 
 		/// <summary>
@@ -143,13 +143,7 @@ namespace meet{
 		/// <param name="port">Remote host port</param>
 		/// <returns></returns>
 		Error connectV6(std::string ip, ushort port) {
-			hostent* ipaddrA = new hostent();
-			if (::inet_pton(AF_INET6, ip.c_str(), &ipaddrA->h_addr) != 1) //0:String is not a valid IP address,-1:Other error
-			{
-				return Error::changeError;
-			}
-			IP ipaddrB(ipaddrA);
-			return connect(ipaddrB, port);
+			return connect(ip, port);
 		}
 
 		/// <summary>

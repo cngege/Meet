@@ -71,12 +71,25 @@ namespace meet
 		/// </summary>
 		/// <param name="ipfamily">地址族</param>
 		/// <param name="addr">字符串ip地址(不能使用域名)</param>
-		IP(Family ipfamily,std::string addr) {
-			IPFamily = ipfamily;
-			if (ipfamily == Family::IPV4){
-				::inet_pton(AF_INET, addr.c_str(), &InAddr);
-			}
-			else if (ipfamily == Family::IPV6){
+		//IP(Family ipfamily,std::string addr) {
+		//	IPFamily = ipfamily;
+		//	if (ipfamily == Family::IPV4){
+		//		::inet_pton(AF_INET, addr.c_str(), &InAddr);
+		//	}
+		//	else if (ipfamily == Family::IPV6){
+		//		::inet_pton(AF_INET6, addr.c_str(), &InAddr6);
+		//	}
+		//}
+
+		/// <summary>
+		/// IP地址 而不是域名
+		/// </summary>
+		/// <param name="addr"></param>
+		IP(const std::string& addr) {
+			IPFamily = Family::IPV4;
+			auto ret = ::inet_pton(AF_INET,addr.c_str(),&InAddr);
+			if (ret == 0) {
+				IPFamily = Family::IPV6;
 				::inet_pton(AF_INET6, addr.c_str(), &InAddr6);
 			}
 		}
@@ -91,17 +104,6 @@ namespace meet
 			InAddr6 = inaddr;
 		}
 
-		IP(sockaddr addr) {
-			if (addr.sa_family == AF_INET) {
-				IPFamily = Family::IPV4;
-				InAddr = ((struct sockaddr_in*)&addr)->sin_addr;
-			}
-			else {
-				IPFamily = Family::IPV6;
-				InAddr6 = ((struct sockaddr_in6*)&addr)->sin6_addr;
-			}
-		}
-
 		IP(sockaddr_in addr_in) {
 			IPFamily = Family::IPV4;
 			InAddr = addr_in.sin_addr;
@@ -112,8 +114,8 @@ namespace meet
 			InAddr6 = addr_in.sin6_addr;
 		}
 
-		IP() {
-			IP(Family::IPV4, "0.0.0.0");
+		IP() : IP("0.0.0.0") {
+
 		}
 	public:
 	public:
@@ -138,26 +140,25 @@ namespace meet
 
 	public:
 
-		static IP getaddrinfo(Family f,std::string dom) {
+		static IP getaddrinfo(Family f,const std::string dom) {
 			WSADATA wsadata; //Define a structure of type WSADATA to store the Windows Sockets data returned by the WSAStartup function call
 			if (WSAStartup(MAKEWORD(2, 0), &wsadata)) //Initialize the socket, start the build, and load "ws2_32.lib" into memory
 			{
 				return NULL;
 			}
-			struct addrinfo hints;
-			memset(&hints, 0, sizeof(struct addrinfo));
-			hints.ai_family = (int)f;     /* Allow IPv4 */
-			hints.ai_flags = AI_CANONNAME;/* For wildcard IP address */
-			hints.ai_protocol = 0;         /* Any protocol */
+			addrinfo hints;
+			memset(&hints, 0, sizeof(addrinfo));
+			hints.ai_family = (int)f;			/* Allow IPv4 */
+			hints.ai_flags = AI_CANONNAME;		/* For wildcard IP address */
+			hints.ai_protocol = 0;				/* Any protocol */
 			hints.ai_socktype = SOCK_STREAM;
 
-			struct addrinfo *res;
+			addrinfo *res;
 			auto ret = ::getaddrinfo(dom.c_str(), NULL, &hints, &res);
-			if (ret == -1 || res == nullptr) {
-				WSACleanup();
+			WSACleanup();
+			if (ret != 0 || res == nullptr) {
 				return NULL;
 			}
-			WSACleanup();
 			IP retipaddr;
 			if (f == Family::IPV6) {
 				retipaddr = IP(*(struct sockaddr_in6*)(res->ai_addr));
