@@ -82,6 +82,7 @@ void startServer(){
     s.onRecvData([](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/,ULONG64 len,const char* data) {
         if (ServerWriteFile && ServerWriteFileIP == meetClient.addr.toString() && ServerWriteFilePort == meetClient.port) {
             ServerWriteFileIO.write(data, len);
+            ServerWriteFileIO.flush();
         }
         else {
             printf("\n[%s -:- %d][数据][%I64d字节]:", meetClient.addr.toString().c_str(), meetClient.port, len);
@@ -276,6 +277,7 @@ void startClient() {
         }
         else {
             ClientWriteFileIO.write(data,len);
+            ClientWriteFileIO.flush();
         }
         });
 
@@ -333,6 +335,11 @@ void startClient() {
         std::string cinput;
         std::getline(std::cin, cinput);
 
+        if (!c.Connected) {
+            std::cout << "连接早已断开" << std::endl;
+            return;
+        }
+
         if (cinput == "0") {
             c.disConnect();
             return;
@@ -341,6 +348,11 @@ void startClient() {
             std::cout << "请输入你要发送的文本:";
             std::string csendtext;
             std::getline(std::cin, csendtext);
+
+            if (!c.Connected) {
+                std::cout << "连接已经断开" << std::endl;
+                return;
+            }
 
             //发送文本
             meet::Error send_error;
@@ -354,6 +366,11 @@ void startClient() {
             std::string csendfile;
             std::getline(std::cin, csendfile);
 
+            if (!c.Connected) {
+                std::cout << "连接已经断开" << std::endl;
+                return;
+            }
+
             //发送文件 以二进制方式读取
             std::ifstream sf(csendfile.c_str(), std::ios::binary | std::ios::in);
             if (!sf.good()) {
@@ -362,7 +379,6 @@ void startClient() {
             }
 
             while(true) {
-
                 if (sf.eof()) {
                     std::cout << "文件发送完成。" << std::endl;
                     break;
@@ -372,6 +388,7 @@ void startClient() {
                 int readsize = static_cast<int>(sf.gcount());
 
                 meet::Error sendFileErr = c.sendData(tempStr, readsize);
+                delete tempStr;
                 if (sendFileErr != meet::Error::noError) {
                     std::cout << "发送文件发生错误:" << meet::getString(sendFileErr) << std::endl;
                     break;
@@ -381,14 +398,14 @@ void startClient() {
 
         }
         else if (cinput == "3") {
-            if (!c.Connected) {
-                std::cout << "没有连接" << std::endl;
-                break;
-            }
             std::cout << "请输入将保存的文件名:";
             std::string csavefile;
             std::getline(std::cin, csavefile);
 
+            if (!c.Connected) {
+                std::cout << "连接已经断开" << std::endl;
+                return;
+            }
             // 设置一个变量  使接收消息回调 确认这个变量后进行文件的保存
 
             ClientWriteFileIO.open(csavefile.c_str(), std::ios::binary);
