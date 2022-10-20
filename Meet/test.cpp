@@ -71,20 +71,20 @@ void startServer(){
 
     s.setBlockingMode(true);
 
-    s.onClientDisConnect([](meet::IP ip,USHORT port) {
-        printf("\n[%s -:- %d][连接] 断开连接\n", ip.toString().c_str(), port);
+    s.onClientDisConnect([](meet::TCPServer::MeetClient meetClient) {
+        printf("\n[%s -:- %d][连接] 断开连接\n", meetClient.addr.toString().c_str(), meetClient.port);
     });
 
-    s.onNewClientConnect([](meet::IP ip, USHORT port, SOCKET socket) {
-        printf("\n[%s -:- %d][连接] 连接成功\n", ip.toString().c_str(), port);
+    s.onNewClientConnect([](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/) {
+        printf("\n[%s -:- %d][连接] 连接成功\n", meetClient.addr.toString().c_str(), meetClient.port);
     });
 
-    s.onRecvData([](meet::IP ip, USHORT port, SOCKET socket,ULONG64 len,const char* data) {
-        if (ServerWriteFile && ServerWriteFileIP == ip.toString() && ServerWriteFilePort == port) {
+    s.onRecvData([](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/,ULONG64 len,const char* data) {
+        if (ServerWriteFile && ServerWriteFileIP == meetClient.addr.toString() && ServerWriteFilePort == meetClient.port) {
             ServerWriteFileIO.write(data, len);
         }
         else {
-            printf("\n[%s -:- %d][数据][%I64d字节]:", ip.toString().c_str(), port, len);
+            printf("\n[%s -:- %d][数据][%I64d字节]:", meetClient.addr.toString().c_str(), meetClient.port, len);
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 9);
             std::cout << std::string(data) << std::endl;
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);

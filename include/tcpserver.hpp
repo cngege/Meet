@@ -41,11 +41,6 @@ namespace meet {
     class TCPServer {
         //using ushort = unsigned short;
         //using ulong = unsigned long;
-
-        using NewClientConnectEvent = void(__fastcall*)(IP, ushort, SOCKET);
-        using ClientDisConnectEvent = void(__fastcall*)(IP, ushort);
-        using RecvDataEvent = void(__fastcall*)(IP, ushort, SOCKET, ULONG64, const char*);
-        using RecvErrorEvent = void(__fastcall*)(IP, ushort, SOCKET, int);
     public:
         typedef struct MeetClient
         {
@@ -54,6 +49,10 @@ namespace meet {
             ushort port;
         };
 
+        using NewClientConnectEvent = void(__fastcall*)(MeetClient);
+        using ClientDisConnectEvent = void(__fastcall*)(MeetClient);
+        using RecvDataEvent = void(__fastcall*)(MeetClient, ULONG64, const char*);
+        using RecvErrorEvent = void(__fastcall*)(MeetClient, int);
     public:
         //TODO 监听地址 监听端口 最大连接数量
         TCPServer(){}
@@ -162,17 +161,17 @@ namespace meet {
                         clientList.push_back(newClient);
 
                         //创建线程 监听客户端传来的消息
-                        auto _recv_thread = std::thread([this, c_socket, clientAddress, clientPort]() {
+                        auto _recv_thread = std::thread([this, newClient]() {
                             char buffer[1024];
                             memset(buffer, '\0', sizeof(buffer));
                             while (_serverRunning) {
                                 int recvbytecount;
-                                if ((recvbytecount = ::recv(c_socket, buffer, sizeof(buffer), 0)) <= 0) {
+                                if ((recvbytecount = ::recv(newClient.clientSocket, buffer, sizeof(buffer), 0)) <= 0) {
                                     //Return 0 Network Outage
                                     if (recvbytecount == 0) {
-                                        removeClientFromClientList(clientAddress, clientPort);
+                                        removeClientFromClientList(newClient.addr, newClient.port);
                                         if (_onClientDisConnectEvent != NULL) {
-                                            _onClientDisConnectEvent(clientAddress, clientPort);
+                                            _onClientDisConnectEvent(newClient);
                                         }
                                         break;
                                     }
@@ -181,7 +180,7 @@ namespace meet {
                                     if (_blockingMode) {
                                         if (recvbytecount == SOCKET_ERROR) {
                                             if (_recvErrorEvent != NULL) {
-                                                _recvErrorEvent(clientAddress, clientPort,c_socket,recvbytecount);
+                                                _recvErrorEvent(newClient,recvbytecount);
                                             }
                                         }
                                     }
@@ -191,7 +190,7 @@ namespace meet {
                                 //接收数据 触发回调
                                 else {
                                     if (_recvDataEvent != NULL) {
-                                        _recvDataEvent(clientAddress, clientPort,c_socket,recvbytecount, buffer);
+                                        _recvDataEvent(newClient,recvbytecount, buffer);
                                     }
                                     memset(buffer, '\0', sizeof(buffer));
                                 }
@@ -201,7 +200,7 @@ namespace meet {
 
                         //触发有客户端连接的回调
                         if (_onNewClientConnectEvent != NULL) {
-                            _onNewClientConnectEvent(clientAddress, clientPort, c_socket);
+                            _onNewClientConnectEvent(newClient);
                         }
                         
                     }
