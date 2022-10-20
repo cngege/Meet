@@ -148,7 +148,7 @@ void startServer(){
                 }
                 if (x >= 0 && x < clientList.size()) {
                     // 控制台输入选择了一个客户端
-                    meet::TCPServer::ClientList client = clientList.at(x);
+                    meet::TCPServer::MeetClient client = clientList.at(x);
                     // 对选择的客户端进行操作
                     for (;;) {
                         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);

@@ -16,7 +16,7 @@
 #ifndef ___MIRACLEFOREST_MEET_IP___
 #define ___MIRACLEFOREST_MEET_IP___
 
-#pragma warning (disable: 4996)
+//#pragma warning (disable: 4996)
 #include <string>
 #include <WinSock2.h>
 #include <WS2tcpip.h>

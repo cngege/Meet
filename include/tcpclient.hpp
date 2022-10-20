@@ -16,6 +16,14 @@
 #ifndef ___MIRACLEFOREST_MEET_TCPCLIENT___
 #define ___MIRACLEFOREST_MEET_TCPCLIENT___
 
+#ifndef ushort
+#define ushort unsigned short
+#endif
+
+#ifndef ulong
+#define ulong unsigned long
+#endif
+
 #include <string>
 #include <thread>
 #include "ip.hpp"
@@ -25,8 +33,7 @@ namespace meet{
 	/// 
 	/// </summary>
 	class TCPClient{
-		using ushort = unsigned short;
-
+		//using ushort = unsigned short;
 		/// <summary>
 		/// TCP断开连接时触发的事件
 		/// </summary>

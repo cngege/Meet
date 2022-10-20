@@ -16,6 +16,14 @@
 #ifndef ___MIRACLEFOREST_MEET_TCPSERVER___
 #define ___MIRACLEFOREST_MEET_TCPSERVER___
 
+#ifndef ushort
+#define ushort unsigned short
+#endif
+
+#ifndef ulong
+#define ulong unsigned long
+#endif
+
 #include "ip.hpp"
 #include <map>
 #include <functional>
@@ -31,20 +39,20 @@ namespace meet {
     /// 
     /// </summary>
     class TCPServer {
-        using ushort = unsigned short;
-        using ulong = unsigned long;
+        //using ushort = unsigned short;
+        //using ulong = unsigned long;
 
         using NewClientConnectEvent = void(__fastcall*)(IP, ushort, SOCKET);
         using ClientDisConnectEvent = void(__fastcall*)(IP, ushort);
         using RecvDataEvent = void(__fastcall*)(IP, ushort, SOCKET, ULONG64, const char*);
         using RecvErrorEvent = void(__fastcall*)(IP, ushort, SOCKET, int);
     public:
-        typedef struct ClientS
+        typedef struct MeetClient
         {
             SOCKET clientSocket;
             IP addr;
             ushort port;
-        }ClientList;
+        };
 
     public:
         //TODO 监听地址 监听端口 最大连接数量
@@ -128,7 +136,7 @@ namespace meet {
                     IP clientAddress;
                     ushort clientPort = 0;
                     if (_listenAddr.IPFamily == Family::IPV4) {
-                        struct sockaddr_in remoteAddr;
+                        struct sockaddr_in remoteAddr = {};
                         int nAddrlen = sizeof(remoteAddr);
                         c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
                         if (c_socket == INVALID_SOCKET) {   //无效的套接字
@@ -138,7 +146,7 @@ namespace meet {
                         clientPort = remoteAddr.sin_port;
                     }
                     else {
-                        struct sockaddr_in6 remoteAddr;
+                        struct sockaddr_in6 remoteAddr = {};
                         int nAddrlen = sizeof(remoteAddr);
                         c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
                         if (c_socket == INVALID_SOCKET) {   //无效的套接字
@@ -148,10 +156,10 @@ namespace meet {
                         clientPort = remoteAddr.sin6_port;
                     }
 
-                    if (_clientList.size() < _maxCount) {
+                    if (clientList.size() < _maxCount) {
 
-                        ClientList newClient = { .clientSocket = c_socket, .addr = clientAddress , .port = clientPort };
-                        _clientList.push_back(newClient);
+                        MeetClient newClient = { .clientSocket = c_socket, .addr = clientAddress , .port = clientPort };
+                        clientList.push_back(newClient);
 
                         //创建线程 监听客户端传来的消息
                         auto _recv_thread = std::thread([this, c_socket, clientAddress, clientPort]() {
@@ -230,10 +238,10 @@ namespace meet {
         /// <param name="port"></param>
         /// <returns></returns>
         Error removeClientFromClientList(IP addr,ushort port) {
-            for (auto it = _clientList.begin(); it != _clientList.end(); it++) {
+            for (auto it = clientList.begin(); it != clientList.end(); it++) {
                 if ((*it).addr.toString() == addr.toString() && (*it).port == port) {		// 条件语句
-                    _clientList.erase(it);		// 移除他
-                    it--;		                    // 让该迭代器指向前一个
+                    clientList.erase(it);		// 移除他
+                    it--;		                // 让该迭代器指向前一个
                     return Error::noError;
                 }
             }
@@ -252,7 +260,7 @@ namespace meet {
             if (!_serverRunning) {
                 return Error::serverNotStarted;
             }
-            for (auto c : _clientList) {
+            for (MeetClient c : clientList) {
                 if (addr.toString() == c.addr.toString() && port == c.port) {
                     shutdown(c.clientSocket, SD_BOTH);
                     if (closesocket(c.clientSocket) == 0) {
@@ -354,8 +362,8 @@ namespace meet {
         /// 获取所有已连接的客户端
         /// </summary>
         /// <returns></returns>
-        std::vector<ClientList> GetALLClient() {
-            return _clientList;
+        std::vector<MeetClient> GetALLClient() {
+            return clientList;
         }
         
 
@@ -394,7 +402,7 @@ namespace meet {
         /// <summary>
         /// 连接的客户端列表
         /// </summary>
-        std::vector<ClientList> _clientList;
+        std::vector<MeetClient> clientList;
         
         /// <summary>
         /// 标志，防止重复初始化， 服务端是否启动
