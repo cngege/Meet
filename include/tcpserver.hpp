@@ -47,10 +47,10 @@ namespace meet {
             ushort port;
         };
 
-        using NewClientConnectEvent = void(__fastcall*)(MeetClient);
-        using ClientDisConnectEvent = void(__fastcall*)(MeetClient);
-        using RecvDataEvent = void(__fastcall*)(MeetClient, ULONG64, const char*);
-        using RecvErrorEvent = void(__fastcall*)(MeetClient, int);
+        using NewClientConnectEvent = std::function<void(MeetClient)>;
+        using ClientDisConnectEvent = std::function<void(MeetClient)>;
+        using RecvDataEvent = std::function<void(MeetClient, ULONG64, const char*)>;
+        using RecvErrorEvent = std::function<void(MeetClient, int)>;
     public:
         //TODO 监听地址 监听端口 最大连接数量
         TCPServer(){}

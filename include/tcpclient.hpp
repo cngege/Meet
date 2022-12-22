@@ -26,6 +26,7 @@
 
 #include <string>
 #include <thread>
+#include <functional>
 #include "ip.hpp"
 
 namespace meet{
@@ -37,20 +38,20 @@ namespace meet{
 		/// <summary>
 		/// TCP断开连接时触发的事件
 		/// </summary>
-		using DisConnectEvent = void(__fastcall*)();
+		using DisConnectEvent = std::function<void()>;
 
 		/// <summary>
 		/// 接收数据时触发的函数类型
 		/// </summary>
 		/// <param name="ULONG64">本次接收到的数据长度</param>
 		/// <param name="const char*">接收到的数据</param>
-		using RecvDataEvent = void(__fastcall*)(ULONG64, const char*);
+		using RecvDataEvent = std::function<void(ULONG64, const char*)>;
 
 		/// <summary>
 		/// 接收消息时错误回调
 		/// </summary>
 		/// <param name="int">错误值</param>
-		using RecvErrorEvent = void(__fastcall*)(int);
+		using RecvErrorEvent = std::function<void(int)>;
 	public:
 		TCPClient(){}
 		~TCPClient(){
