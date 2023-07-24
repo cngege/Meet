@@ -162,10 +162,6 @@ namespace meet
 	class IP
 	{
 	public:
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="_host"></param>
 		IP(hostent* host) {
 			if (host->h_addrtype == AF_INET) {
 				IPFamily = Family::IPV4;
@@ -177,25 +173,10 @@ namespace meet
 			}
 		};
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="ipfamily">地址族</param>
-		/// <param name="addr">字符串ip地址(不能使用域名)</param>
-		//IP(Family ipfamily,std::string addr) {
-		//	IPFamily = ipfamily;
-		//	if (ipfamily == Family::IPV4){
-		//		::inet_pton(AF_INET, addr.c_str(), &InAddr);
-		//	}
-		//	else if (ipfamily == Family::IPV6){
-		//		::inet_pton(AF_INET6, addr.c_str(), &InAddr6);
-		//	}
-		//}
-
-		/// <summary>
-		/// IP地址 而不是域名
-		/// </summary>
-		/// <param name="addr"></param>
+		/**
+		 * @brief IP地址 而不是域名
+		 * @param addr 字符串格式的IP地址 比如:0.0.0.0 / ::
+		*/
 		IP(const std::string& addr) {
 			IPFamily = Family::IPV4;
 			auto ret = ::inet_pton(AF_INET, addr.c_str(), &InAddr);
@@ -232,10 +213,10 @@ namespace meet
 	public:
 	public:
 
-		/// <summary>
-		/// 将IP地址转为字符串输出
-		/// </summary>
-		/// <returns></returns>
+		/**
+		 * @brief 将IP地址转为字符串输出
+		 * @return 
+		*/
 		std::string toString() {
 
 			if (IPFamily == Family::IPV4) {
@@ -251,6 +232,12 @@ namespace meet
 
 	public:
 
+		/**
+		 * @brief 尝试将域名转为IP地址
+		 * @param f 地址协议 IPV4/IPV6
+		 * @param dom 域名
+		 * @return 
+		*/
 		static IP getaddrinfo(Family f, const std::string dom) {
 			WSADATA wsadata; //Define a structure of type WSADATA to store the Windows Sockets data returned by the WSAStartup function call
 			if (WSAStartup(MAKEWORD(2, 0), &wsadata)) //Initialize the socket, start the build, and load "ws2_32.lib" into memory
@@ -282,44 +269,43 @@ namespace meet
 		}
 
 	public:
-		/// <summary>
-		/// IN_ADDR格式的IPV4地址
-		/// </summary>
+		/**
+		 * @brief IN_ADDR格式的IPV4地址
+		*/
 		in_addr InAddr = {};
 
-		/// <summary>
-		/// in_addr6格式的IPV6地址
-		/// </summary>
+		/**
+		 * @brief in_addr6格式的IPV6地址
+		*/
 		in_addr6 InAddr6 = {};
-		/// <summary>
-		/// IP协议族 V4/V6
-		/// </summary>
+
+		/**
+		 * @brief IP协议族 V4/V6
+		*/
 		Family IPFamily = Family::IPV4;
 	};//class IP
 
 
 	// class TCPClient
-		/// <summary>
-	/// 
-	/// </summary>
 	class TCPClient {
 		//using ushort = unsigned short;
-		/// <summary>
-		/// TCP断开连接时触发的事件
-		/// </summary>
+		
+		/**
+		 * @brief TCP断开连接时触发的事件
+		*/
 		using DisConnectEvent = std::function<void()>;
 
-		/// <summary>
-		/// 接收数据时触发的函数类型
-		/// </summary>
-		/// <param name="ULONG64">本次接收到的数据长度</param>
-		/// <param name="const char*">接收到的数据</param>
+		/**
+		 * @brief 接收数据时触发的函数类型
+		 * @param ULONG64 本次接收到的数据长度
+		 * @param const char* 接收到的数据
+		*/
 		using RecvDataEvent = std::function<void(ULONG64, const char*)>;
 
-		/// <summary>
-		/// 接收消息时错误回调
-		/// </summary>
-		/// <param name="int">错误值</param>
+		/**
+		 * @brief 接收消息时错误回调
+		 * @param int 错误值
+		*/
 		using RecvErrorEvent = std::function<void(int)>;
 	public:
 		TCPClient() {}
@@ -334,12 +320,12 @@ namespace meet
 	public:
 	public:
 
-		/// <summary>
-		/// To connect to a remote host, you must connect without establishing a connection
-		/// </summary>
-		/// <param name="ip">host</param>
-		/// <param name="port">port</param>
-		/// <returns></returns>
+		/**
+		 * @brief To connect to a remote host, you must connect without establishing a connection
+		 * @param ip host
+		 * @param port port
+		 * @return 
+		*/
 		Error connect(IP ip, ushort port) {
 			if (Connected) {
 				return Error::connecting;
@@ -395,31 +381,31 @@ namespace meet
 			return Error::noError;
 		};
 
-		/// <summary>
-		/// Specify IPV4 IP for connection
-		/// </summary>
-		/// <param name="ip">Remote host ipv4 address, e.g. "127.0.0.1"</param>
-		/// <param name="port">Remote host port</param>
-		/// <returns></returns>
+		/**
+		 * @brief 使用Ipv4协议进行连接 / Specify IPV4 IP for connection
+		 * @param ip 远程主机的ipv4地址, 比如: "127.0.0.1" / Remote host ipv4 address, e.g. "127.0.0.1"
+		 * @param port 远程主机端口 / Remote host port
+		 * @return 
+		*/
 		Error connectV4(const std::string& ip, ushort port) {
 			//IP ipaddrB(Family::IPV4,ip);
 			return connect(ip, port);
 		}
 
-		/// <summary>
-		/// Specify IPV6 IP for connection
-		/// </summary>
-		/// <param name="ip">Remote host ipv6 address, such as "2000:0:0:0:0:0:0:0:1"</param>
-		/// <param name="port">Remote host port</param>
-		/// <returns></returns>
+		/**
+		 * @brief 使用Ipv6协议进行连接 / Specify IPV6 IP for connection 
+		 * @param ip 远程主机的ipv6地址, 比如: "2000:0:0:0:0:0:0:0:1" / Remote host ipv6 address, such as "2000:0:0:0:0:0:0:0:1"
+		 * @param port 远程主机端口 / Remote host port
+		 * @return 
+		*/
 		Error connectV6(const std::string& ip, ushort port) {
 			return connect(ip, port);
 		}
 
-		/// <summary>
-		/// Disconnection
-		/// </summary>
-		/// <returns></returns>
+		/**
+		 * @brief 断开同服务端的连接
+		 * @return 是否有错误 [Error::noConnected] / [Error::noError] / [Error::unkError]
+		*/
 		Error disConnect() {
 			if (!Connected) {
 				return Error::noConnected;
@@ -432,11 +418,11 @@ namespace meet
 			return Error::unkError;
 		};
 
-		/// <summary>
-		///  Send text
-		/// </summary>
-		/// <param name="text">Text to be sent</param>
-		/// <returns></returns>
+		/**
+		 * @brief 发送字符串 / Send text
+		 * @param text 待发送的文本 / Text to be sent
+		 * @return 是否有错误 [Error::noConnected] / [Error::dataTooLong] / [Error::noError] / [Error::sendFailed]
+		*/
 		Error sendText(std::string text) {
 			if (!Connected) {
 				return Error::noConnected;
@@ -458,11 +444,12 @@ namespace meet
 			return Error::noError;
 		};
 
-		/// <summary>
-		/// Sending bytes
-		/// </summary>
-		/// <param name="data"></param>
-		/// <returns></returns>
+		/**
+		 * @brief 发送字节 / Sending bytes
+		 * @param data 要发送的字节数据
+		 * @param size 数据长度
+		 * @return 是否有错误 [Error::noConnected] / [Error::noError] / [Error::sendFailed]
+		*/
 		Error sendData(char* data, int size) {
 			if (!Connected) {
 				return Error::noConnected;
@@ -480,11 +467,11 @@ namespace meet
 			return Error::noError;
 		};
 
-		/// <summary>
-		/// 设置阻塞模式,在连接前设置 默认为阻塞模式
-		/// </summary>
-		/// <param name="blocking">是否设置成阻塞模式</param>
-		/// <returns></returns>
+		/**
+		 * @brief 设置阻塞模式,在连接前设置 默认为阻塞模式
+		 * @param blocking true阻塞模式
+		 * @return 是否有错误 [Error::connecting] / [Error::noError]
+		*/
 		Error setBlockingMode(bool blocking) {
 			if (!Connected) {
 				_blockingmode = blocking;
@@ -493,37 +480,36 @@ namespace meet
 			return Error::connecting;
 		}
 
-
-		/// <summary>
-		/// Register callback events
-		/// </summary>
-		/// <param name="disConnectEvent"></param>
+		/**
+		 * @brief 注册回调事件 / Register callback events
+		 * @param disConnectEvent 
+		*/
 		void onDisConnect(DisConnectEvent disConnectEvent) {
 			_disConnectEvent = disConnectEvent;
 		};
 
-		/// <summary>
-		/// Register callback events
-		/// </summary>
-		/// <param name="disConnectEvent"></param>
+		/**
+		 * @brief 注册回调事件 / Register callback events
+		 * @param recvDataEvent
+		*/
 		void onRecvData(RecvDataEvent recvDataEvent) {
 			_recvDataEvent = recvDataEvent;
 		}
 
-		/// <summary>
-		/// Register callback events
-		/// </summary>
-		/// <param name="recvErrorEvent"></param>
+		/**
+		 * @brief 注册回调事件 / Register callback events
+		 * @param recvErrorEvent
+		*/
 		void onRecvError(RecvErrorEvent recvErrorEvent) {
 			_recvErrorEvent = recvErrorEvent;
 		}
 
 	public:
 
-		/// <summary>
-		/// Thread function, responsible for receiving network packets, and classify and analyze the processing
-		/// </summary>
-		/// <param name="c">TCPClient Instance</param>
+		/**
+		 * @brief 线程函数,开启一个循环接受网络包,并对相关状态进行分析 / Thread function, responsible for receiving network packets, and classify and analyze the processing
+		 * @param c TCP客户端 / TCPClient Instance
+		*/
 		static void startRecv(TCPClient* c) {
 			if (c->Connected) {
 
@@ -578,27 +564,23 @@ namespace meet
 
 		std::thread _recv_thread;
 
-		/// <summary>
-		/// 断开连接时触发的事件
-		/// </summary>
+		/**
+		 * @brief 断开连接时触发的事件
+		*/
 		DisConnectEvent _disConnectEvent = NULL;
 
-		/// <summary>
-		/// 有数据达到时自动触发的事件
-		/// </summary>
+		/**
+		 * @brief 有数据达到时自动触发的事件
+		*/
 		RecvDataEvent _recvDataEvent = NULL;
 
-		/// <summary>
-		/// recv线程接收消息时出错触发事件
-		/// </summary>
+		/**
+		 * @brief recv线程接收消息时出错触发事件
+		*/
 		RecvErrorEvent _recvErrorEvent = NULL;
 	};//class TCPClient
 
 	//class TCPServer
-
-	/// <summary>
-	/// 
-	/// </summary>
 	class TCPServer {
 	public:
 		struct MeetClient
@@ -801,11 +783,11 @@ namespace meet
 
 	public:
 
-		/// <summary>
-		/// 设置阻塞模式,在连接前设置 默认为阻塞模式
-		/// </summary>
-		/// <param name="blocking">是否设置成阻塞模式</param>
-		/// <returns></returns>
+		/**
+		 * @brief 设置阻塞模式,在连接前设置 默认为阻塞模式
+		 * @param blocking 阻塞模式
+		 * @return 是否有错误 [Error::serverIsStarted] / [Error::noError]
+		*/
 		Error setBlockingMode(bool blocking) {
 			if (!_serverRunning) {
 				_blockingMode = blocking;
@@ -814,12 +796,12 @@ namespace meet
 			return Error::serverIsStarted;
 		}
 
-		/// <summary>
-		/// 从客户端列表中移除客户端信息
-		/// </summary>
-		/// <param name="addr"></param>
-		/// <param name="port"></param>
-		/// <returns></returns>
+		/**
+		 * @brief 从客户端列表中移除客户端信息
+		 * @param addr 
+		 * @param port 
+		 * @return 是否有错误 [Error::noFoundClient] / [Error::noError]
+		*/
 		Error removeClientFromClientList(IP addr, ushort port) {
 			for (auto it = clientList.begin(); it != clientList.end(); it++) {
 				if ((*it).addr.toString() == addr.toString() && (*it).port == port) {		// 条件语句
@@ -832,14 +814,12 @@ namespace meet
 			return Error::noFoundClient;
 		}
 
-
-
-		/// <summary>
-		/// 断开客户端的连接
-		/// </summary>
-		/// <param name="addr"></param>
-		/// <param name="port"></param>
-		/// <returns></returns>
+		/**
+		 * @brief 断开客户端的连接
+		 * @param addr 
+		 * @param port 
+		 * @return 是否有错误 [Error::serverNotStarted] / [Error::noError] / [Error::unkError] / [Error::noFoundClient]
+		*/
 		Error disClientConnect(IP addr, ushort port) {
 			if (!_serverRunning) {
 				return Error::serverNotStarted;
@@ -859,45 +839,46 @@ namespace meet
 		};
 
 
-		/// <summary>
-		/// 注册客户端连接时事件
-		/// </summary>
-		/// <param name="onNewClientConnectEvent"></param>
+		/**
+		 * @brief 注册客户端连接时事件
+		 * @param onNewClientConnectEvent 
+		*/
 		void onNewClientConnect(NewClientConnectEvent onNewClientConnectEvent) {
 			_onNewClientConnectEvent = onNewClientConnectEvent;
 		};
 
-		/// <summary>
-		/// 注册客户端断开连接时事件
-		/// </summary>
-		/// <param name="onClientDisConnectEvent"></param>
+		/**
+		 * @brief 注册客户端断开连接时事件
+		 * @param onClientDisConnectEvent 
+		*/
 		void onClientDisConnect(ClientDisConnectEvent onClientDisConnectEvent) {
 			_onClientDisConnectEvent = onClientDisConnectEvent;
 		};
 
-		/// <summary>
-		/// 注册接收到客户端消息时回调
-		/// </summary>
-		/// <param name="recvDataEvent"></param>
+		/**
+		 * @brief 注册接收到客户端消息时回调
+		 * @param recvDataEvent 
+		*/
 		void onRecvData(RecvDataEvent recvDataEvent) {
 			_recvDataEvent = recvDataEvent;
 		}
 
-		/// <summary>
-		/// 阻塞模式 接收客户端消息时错误回调
-		/// </summary>
-		/// <param name="recvErrorEvent"></param>
+		/**
+		 * @brief 阻塞模式 接收客户端消息时错误回调
+		 * @param recvErrorEvent 
+		*/
 		void onRecvError(RecvErrorEvent recvErrorEvent) {
 			_recvErrorEvent = recvErrorEvent;
 		}
 
 	public:
 
-		/// <summary>
-		///  Send text
-		/// </summary>
-		/// <param name="text">Text to be sent</param>
-		/// <returns></returns>
+		/**
+		 * @brief 发送文本 /  Send text
+		 * @param socket 
+		 * @param text 
+		 * @return 是否有错误 [Error::serverNotStarted] / [Error::noError] / [Error::dataTooLong] / [Error::sendFailed]
+		*/
 		Error sendText(SOCKET socket, std::string text) {
 			if (!_serverRunning) {
 				return Error::serverNotStarted;
@@ -919,11 +900,13 @@ namespace meet
 			return Error::noError;
 		};
 
-		/// <summary>
-		/// Sending bytes
-		/// </summary>
-		/// <param name="data"></param>
-		/// <returns></returns>
+		/**
+		 * @brief 发送字节 / Sending bytes
+		 * @param socket 
+		 * @param data 
+		 * @param size 
+		 * @return 是否有错误 [Error::serverNotStarted] / [Error::noError] / [Error::sendFailed]
+		*/
 		Error sendData(SOCKET socket, char* data, int size) {
 			if (!_serverRunning) {
 				return Error::serverNotStarted;
@@ -942,26 +925,26 @@ namespace meet
 			return Error::noError;
 		};
 
-		/// <summary>
-		/// 获取所有已连接的客户端
-		/// </summary>
-		/// <returns></returns>
+		/**
+		 * @brief 获取所有已连接的客户端
+		 * @return 客户端列表
+		*/
 		std::vector<MeetClient> GetALLClient() {
 			return clientList;
 		}
 
 	private:
-		/// <summary>
-		/// 监听地址
-		/// </summary>
+		/**
+		 * @brief 监听地址
+		*/
 		IP _listenAddr = std::string("0.0.0.0");
-		/// <summary>
-		/// 监听端口
-		/// </summary>
+		/**
+		 * @brief 监听端口
+		*/
 		ushort _listenPort = 0;
-		/// <summary>
-		/// 最大客户端连接数量
-		/// </summary>
+		/**
+		 * @brief 最大客户端连接数量
+		*/
 		int _maxCount = MEET_LISTEN_DEFAULT_MAXCONNECT;
 
 		WSADATA _wsaDat{};
@@ -970,24 +953,24 @@ namespace meet
 		struct sockaddr_in _sock4 = {};
 		struct sockaddr_in6 _sock6 = {};
 
-		/// <summary>
-		/// 服务端监听会话
-		/// </summary>
+		/**
+		 * @brief 服务端监听会话
+		*/
 		SOCKET _socket{};
 
-		/// <summary>
-		/// 接收消息阻塞模式
-		/// </summary>
+		/**
+		 * @brief 接收消息阻塞模式
+		*/
 		bool _blockingMode = true;
 
-		/// <summary>
-		/// 连接的客户端列表
-		/// </summary>
+		/**
+		 * @brief 连接的客户端列表
+		*/
 		std::vector<MeetClient> clientList;
 
-		/// <summary>
-		/// 标志，防止重复初始化， 服务端是否启动
-		/// </summary>
+		/**
+		 * @brief 标志，防止重复初始化， 服务端是否启动
+		*/
 		bool _serverRunning = false;
 
 		// 回调
