@@ -148,16 +148,7 @@
     <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\error.hpp" />
-    <ClInclude Include="..\include\meet">
-      <FileType>Document</FileType>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\include\ip.hpp" />
     <ClInclude Include="..\include\Meet.hpp" />
-    <ClInclude Include="..\include\tcpclient.hpp" />
-    <ClInclude Include="..\include\tcpserver.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

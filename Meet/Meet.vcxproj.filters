@@ -16,21 +16,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\ip.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\tcpclient.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\tcpserver.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\meet">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\error.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\Meet.hpp">
       <Filter>include</Filter>
     </ClInclude>
