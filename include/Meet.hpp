@@ -16,6 +16,16 @@
 #define ulong unsigned long
 #endif
 
+#ifndef MEET_LISTEN_BACKLOG
+#define MEET_LISTEN_BACKLOG 5
+#endif // !MEET_LISTEN_BACKLOG
+
+// 默认的最大连接数 在没有设置的时候
+#ifndef MEET_LISTEN_DEFAULT_MAXCONNECT
+#define MEET_LISTEN_DEFAULT_MAXCONNECT 30
+#endif // !MEET_LISTEN_DEFAULT_MAXCONNECT
+
+
 namespace meet
 {
 	/// <summary>
@@ -665,7 +675,8 @@ namespace meet
 				}
 			}
 
-			if (::listen(_socket, _maxCount) == SOCKET_ERROR) {
+			// 系统API建立监听,这里第二个参数表示在建立握手时队列最多可等待的连接数
+			if (::listen(_socket, MEET_LISTEN_BACKLOG) == SOCKET_ERROR) {
 				return Error::listenError;
 			}
 
@@ -788,6 +799,7 @@ namespace meet
 		Error removeClientFromClientList(IP addr, ushort port) {
 			for (auto it = clientList.begin(); it != clientList.end(); it++) {
 				if ((*it).addr.toString() == addr.toString() && (*it).port == port) {		// 条件语句
+					// disClientConnect 方法内部会调用这个函数
 					clientList.erase(it);		// 移除他
 					it--;		                // 让该迭代器指向前一个
 					return Error::noError;
@@ -925,11 +937,11 @@ namespace meet
 		/// <summary>
 		/// 监听端口
 		/// </summary>
-		ushort _listenPort;
+		ushort _listenPort = 0;
 		/// <summary>
 		/// 最大客户端连接数量
 		/// </summary>
-		int _maxCount;
+		int _maxCount = MEET_LISTEN_DEFAULT_MAXCONNECT;
 
 		WSADATA _wsaDat;
 		ushort _versionRequested = MAKEWORD(2, 2);
