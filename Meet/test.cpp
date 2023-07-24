@@ -101,9 +101,15 @@ void startServer(){
     });
 
     // 监听地址 对监听v4地址和 v6地址做出区分
-    meet::IP listenAddr((fa == meet::Family::IPV4) ? "0.0.0.0" : "::");
-    //meet::IP listenAddr = meet::IP::getaddrinfo(meet::Family::IPV4, "0.0.0.0");
-    meet::Error listen_err = s.Listen(listenAddr, port, maxconn);
+    if (fa == meet::Family::IPV6) {
+        s.setListenAddress("::");
+    }
+
+    // 设置服务端的客户端连接队列的最大值
+    s.setMaxConnectCount(maxconn);
+
+    // 开始监听
+    meet::Error listen_err = s.Listen(port);
     if (listen_err != meet::Error::noError) {
         std::cout << "监听错误:" << meet::getString(listen_err) << std::endl;
         return;

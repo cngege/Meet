@@ -625,21 +625,45 @@ namespace meet
 		}
 	public:
 
-		/// <summary>
-		/// 开始监听设备地址和端口
-		/// </summary>
-		/// <param name="listenAddress">监听的IP地址</param>
-		/// <param name="listenPort">监听的端口</param>
-		/// <param name="maxConnectCount">允许的最大客户端连接数量</param>
-		/// <returns></returns>
-		Error Listen(IP listenAddress, ushort listenPort, int maxConnectCount) {
+		/**
+		 * @brief 设置 服务端可允许最大客户端连接数
+		 * @param count 连接数量
+		 * @return 是否有错误 [Error::serverIsStarted / Error::noError]
+		*/
+		Error setMaxConnectCount(int count) {
+			if (_serverRunning) {					// 暂时不允许在监听之后设置,后续加入如果设置的连接数小于现有的连接数,则断开多余的连接
+				return Error::serverIsStarted;
+			}
+			_maxCount = count;
+			return Error::noError;
+		}
+
+		/**
+		 * @brief 设置服务端的监听地址
+		 * @param address 监听地址比如 0.0.0.0 / 127.0.0.0 / ::
+		 * @return 是否有错误 [Error::serverIsStarted / Error::noError]
+		*/
+		Error setListenAddress(std::string address) {
+			if (_serverRunning) {
+				return Error::serverIsStarted;
+			}
+			_listenAddr = address;					// 因为构造函数中有string 所以可以隐式转换
+			return Error::noError;
+		}
+
+		/**
+		 * @brief 开启一个服务单的监听, 监听地址默认0.0.0.0
+		 * @param listenPort 监听端口 0-65535
+		 * @return 是否有错误
+		*/
+		Error Listen(ushort listenPort) {
 			if (_serverRunning) {
 				return Error::serverIsStarted;
 			}
 
-			_listenAddr = listenAddress;
+			//_listenAddr = listenAddress;
 			_listenPort = listenPort;
-			_maxCount = maxConnectCount;
+			//_maxCount = maxConnectCount;
 
 			if (WSAStartup(_versionRequested, &_wsaDat) != 0) {
 				return Error::initializationWinsockFailed;
@@ -926,14 +950,11 @@ namespace meet
 			return clientList;
 		}
 
-
-	protected:
-	private:
 	private:
 		/// <summary>
 		/// 监听地址
 		/// </summary>
-		IP _listenAddr;
+		IP _listenAddr = std::string("0.0.0.0");
 		/// <summary>
 		/// 监听端口
 		/// </summary>
