@@ -31,5 +31,8 @@
     <ClInclude Include="..\include\error.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\Meet.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -14,7 +14,9 @@
 * 
 */
 
-#include "../include/meet"
+//#include "../include/meet"
+#include "../include/Meet.hpp"
+
 #include <iostream>
 #include <fstream>
 #include <chrono>
@@ -30,6 +32,7 @@ std::string ServerWriteFileIP;
 USHORT ServerWriteFilePort;
 std::ofstream ServerWriteFileIO;
 
+// 开启一个TCP的服务
 void startServer(){
     
     meet::Family fa = meet::Family::IPV4;
@@ -69,16 +72,20 @@ void startServer(){
 
     }
 
+    // 设置为阻塞模式
     s.setBlockingMode(true);
 
+    // 监听客户端断开连接的消息
     s.onClientDisConnect([](meet::TCPServer::MeetClient meetClient) {
         printf("\n[%s -:- %d][连接] 断开连接\n", meetClient.addr.toString().c_str(), meetClient.port);
     });
 
+    // 监听客户端连接的消息
     s.onNewClientConnect([](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/) {
         printf("\n[%s -:- %d][连接] 连接成功\n", meetClient.addr.toString().c_str(), meetClient.port);
     });
 
+    // 当有数据到达时监听消息
     s.onRecvData([](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/,ULONG64 len,const char* data) {
         if (ServerWriteFile && ServerWriteFileIP == meetClient.addr.toString() && ServerWriteFilePort == meetClient.port) {
             ServerWriteFileIO.write(data, len);
@@ -93,6 +100,7 @@ void startServer(){
 
     });
 
+    // 监听地址 对监听v4地址和 v6地址做出区分
     meet::IP listenAddr((fa == meet::Family::IPV4) ? "0.0.0.0" : "::");
     //meet::IP listenAddr = meet::IP::getaddrinfo(meet::Family::IPV4, "0.0.0.0");
     meet::Error listen_err = s.Listen(listenAddr, port, maxconn);
@@ -265,6 +273,7 @@ void startServer(){
 
 }
 
+// 开启一个客户端
 void startClient() {
     
     //关闭阻塞模式
@@ -323,6 +332,7 @@ void startClient() {
     meet::Error connect_error;
     meet::IP connIp = meet::IP::getaddrinfo((fm_input == "6") ? meet::Family::IPV6 : meet::Family::IPV4, ip_input);
 
+    // 连接服务端 并对连接结果进行判断
     if ((connect_error = c.connect(connIp, port)) != meet::Error::noError) {
         std::cout << "连接错误:" << meet::getString(connect_error) << std::endl;
         return;

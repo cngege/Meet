@@ -1,4 +1,4 @@
-/*
+﻿/*
 *
 * Copyright(C) 2022 MiracleForest Studio. All Rights Reserved.
 *
@@ -23,7 +23,7 @@ namespace meet {
 	enum class Error : int {
 		noError = 0,
 		unkError = -1,
-		initializationWinsockFailed = -16,
+		initializationWinsockFailed = -16,	// 初始化 Winsock 失败
 		socketError,
 		bindError,
 		listenError,
