@@ -964,7 +964,7 @@ namespace meet
 		/// </summary>
 		int _maxCount = MEET_LISTEN_DEFAULT_MAXCONNECT;
 
-		WSADATA _wsaDat;
+		WSADATA _wsaDat{};
 		ushort _versionRequested = MAKEWORD(2, 2);
 
 		struct sockaddr_in _sock4 = {};
@@ -973,7 +973,7 @@ namespace meet
 		/// <summary>
 		/// 服务端监听会话
 		/// </summary>
-		SOCKET _socket;
+		SOCKET _socket{};
 
 		/// <summary>
 		/// 接收消息阻塞模式
