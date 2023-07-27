@@ -267,7 +267,9 @@ namespace meet
 		 * @return 
 		*/
 		std::string toString() {
-
+			if (!_valid) {
+				return "valid = false";
+			}
 			if (IPFamily == Family::IPV4) {
 				char IPStrBuf[INET_ADDRSTRLEN] = { '\0' };
 				return std::string(inet_ntop(AF_INET, (void*)&InAddr, IPStrBuf, sizeof(IPStrBuf)));
@@ -279,6 +281,10 @@ namespace meet
 
 		}
 
+		/**
+		 * @brief 该IP是否有效 比如由域名转化的IP,或用户输入的IP后应当校验
+		 * @return 
+		*/
 		bool isValid() {
 			return _valid;
 		}
