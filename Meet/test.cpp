@@ -316,13 +316,10 @@ void startClient() {
             //按默认的来连接
             ip_input = "127.0.0.1";
             port = 3000;
-            fm_input = "4";
             break;
         }
         std::cout << "端口:";
         std::getline(std::cin, port_input);
-        std::cout << "协议:";
-        std::getline(std::cin, fm_input);
         
         auto p = atoi(port_input.c_str());
         if (p >= 65535 || p <= 0) {
@@ -336,7 +333,15 @@ void startClient() {
 
 
     meet::Error connect_error;
-    meet::IP connIp = meet::IP::getaddrinfo((fm_input == "6") ? meet::Family::IPV6 : meet::Family::IPV4, ip_input);
+    //meet::IP connIp = meet::IP::getaddrinfo(ip_input);
+    meet::IP connIp = ip_input;
+
+    if (!connIp.isValid()) {
+        std::cout << "地址解析错误: 你输入的域名可能无效 " << ip_input << std::endl;
+        return;
+    }
+
+    std::cout << "IPAddress: " << connIp.toString() << std::endl;
 
     // 连接服务端 并对连接结果进行判断
     if ((connect_error = c.connect(connIp, port)) != meet::Error::noError) {

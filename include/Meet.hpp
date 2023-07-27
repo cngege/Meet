@@ -163,13 +163,20 @@ namespace meet
 	{
 	public:
 		IP(hostent* host) {
-			if (host->h_addrtype == AF_INET) {
-				IPFamily = Family::IPV4;
-				memcpy(&InAddr, host->h_addr, host->h_length);
+			// 做 IP ip = NULL 兼容
+			if (host == NULL) {
+				_valid = false;
 			}
-			else if (host->h_addrtype == AF_INET6) {
-				IPFamily = Family::IPV6;
-				memcpy(&InAddr6, host->h_addr, host->h_length);
+			else {
+				if (host->h_addrtype == AF_INET) {
+					IPFamily = Family::IPV4;
+					memcpy(&InAddr, host->h_addr, host->h_length);
+				}
+				else if (host->h_addrtype == AF_INET6) {
+					IPFamily = Family::IPV6;
+					memcpy(&InAddr6, host->h_addr, host->h_length);
+				}
+				_valid = true;
 			}
 		};
 
@@ -177,37 +184,79 @@ namespace meet
 		 * @brief IP地址 而不是域名
 		 * @param addr 字符串格式的IP地址 比如:0.0.0.0 / ::
 		*/
-		IP(const std::string& addr) {
-			IPFamily = Family::IPV4;
-			auto ret = ::inet_pton(AF_INET, addr.c_str(), &InAddr);
-			if (ret == 0) {
-				IPFamily = Family::IPV6;
-				::inet_pton(AF_INET6, addr.c_str(), &InAddr6);
-			}
+		//IP(const std::string& addr) {
+		//	IPFamily = Family::IPV4;
+		//	auto ret = ::inet_pton(AF_INET, addr.c_str(), &InAddr);
+		//	if (ret == 0) {
+		//		IPFamily = Family::IPV6;
+		//		ret = ::inet_pton(AF_INET6, addr.c_str(), &InAddr6);
+		//		if (ret == 0) {
+		//			_valid = false;
+		//			return;
+		//		}
+		//	}
+		//	_valid = true;
+		//}
+
+		/**
+		 * @brief IP?域名? 直接转化,并识别V4还是V6
+		 * @param ipdom IP或域名
+		*/
+		IP(const std::string& ipdom) {
+			IP ip = IP::getaddrinfo(ipdom);
+			this->InAddr = ip.InAddr;
+			this->InAddr6 = ip.InAddr6;
+			this->IPFamily = ip.IPFamily;
+			this->_valid = ip._valid;
 		}
+
 
 		IP(IN_ADDR inaddr) {
 			IPFamily = Family::IPV4;
 			InAddr = inaddr;
+			_valid = true;
 		}
 
 		IP(in_addr6 inaddr) {
 			IPFamily = Family::IPV6;
 			InAddr6 = inaddr;
+			_valid = true;
 		}
 
-		IP(sockaddr_in addr_in) {
-			IPFamily = Family::IPV4;
-			InAddr = addr_in.sin_addr;
+		IP(const sockaddr& addr) {
+			if (addr.sa_family == (int)Family::IPV4) {
+				IPFamily = Family::IPV4;
+				InAddr = ((sockaddr_in*)&addr)->sin_addr;
+			}
+			else 
+			{
+				IPFamily = Family::IPV6;
+				InAddr6 = ((sockaddr_in6*)&addr)->sin6_addr;
+			}
+			_valid = true;
 		}
 
-		IP(sockaddr_in6 addr_in) {
-			IPFamily = Family::IPV6;
-			InAddr6 = addr_in.sin6_addr;
-		}
+		//IP(sockaddr_in addr_in) {
+		//	IPFamily = Family::IPV4;
+		//	InAddr = addr_in.sin_addr;
+		//	_valid = true;
+		//}
 
-		IP() : IP("0.0.0.0") {
+		//IP(sockaddr_in6 addr_in) {
+		//	IPFamily = Family::IPV6;
+		//	InAddr6 = addr_in.sin6_addr;
+		//	_valid = true;
+		//}
 
+		//IP(IP& thi) {
+		//	InAddr = thi.InAddr;
+		//	InAddr6 = thi.InAddr6;
+		//	IPFamily = thi.IPFamily;
+		//	_valid = thi._valid;
+		//}
+
+		IP(){
+			_valid = false;
 		}
 	public:
 	public:
@@ -230,6 +279,10 @@ namespace meet
 
 		}
 
+		bool isValid() {
+			return _valid;
+		}
+
 	public:
 
 		/**
@@ -238,7 +291,7 @@ namespace meet
 		 * @param dom 域名
 		 * @return 
 		*/
-		static IP getaddrinfo(Family f, const std::string dom) {
+		static IP getaddrinfo(const std::string& dom) {
 			WSADATA wsadata; //Define a structure of type WSADATA to store the Windows Sockets data returned by the WSAStartup function call
 			if (WSAStartup(MAKEWORD(2, 0), &wsadata)) //Initialize the socket, start the build, and load "ws2_32.lib" into memory
 			{
@@ -246,27 +299,34 @@ namespace meet
 			}
 			addrinfo hints;
 			memset(&hints, 0, sizeof(addrinfo));
-			hints.ai_family = (int)f;			/* Allow IPv4 */
-			hints.ai_flags = AI_CANONNAME;		/* For wildcard IP address */
-			hints.ai_protocol = 0;				/* Any protocol */
-			hints.ai_socktype = SOCK_STREAM;
+			hints.ai_family = AF_UNSPEC;			/* Allow IPv4 */ // 自动识别
+			//hints.ai_flags = AI_CANONNAME;		/* For wildcard IP address */
+			hints.ai_flags = AI_ALL;				/* For wildcard IP address */
+			hints.ai_protocol = 0;					/* Any protocol */ // IPPROTO_TCP、IPPROTO_UDP
+			hints.ai_socktype = 0;					/* ALL */
 
 			addrinfo* res;
 			auto ret = ::getaddrinfo(dom.c_str(), NULL, &hints, &res);
 			WSACleanup();
-			if (ret != 0 || res == nullptr) {
+			if (ret != 0) {
 				return NULL;
 			}
-			IP retipaddr;
-			if (f == Family::IPV6) {
-				retipaddr = IP(*(struct sockaddr_in6*)(res->ai_addr));
-			}
-			else {
-				retipaddr = IP(*(struct sockaddr_in*)(res->ai_addr));
-			}
+			IP retipaddr = IP(*res->ai_addr);
 			freeaddrinfo(res);
 			return retipaddr;
 		}
+
+		//IP& operator=(const IP& ip) {
+		//	if (this == &ip) {
+		//		return *this;
+		//	}
+		//	this->InAddr = ip.InAddr;
+		//	this->InAddr6 = ip.InAddr6;
+		//	this->IPFamily = ip.IPFamily;
+		//	this->_valid = ip._valid;
+		//	return *this;
+		//}
+
 
 	public:
 		/**
@@ -283,6 +343,12 @@ namespace meet
 		 * @brief IP协议族 V4/V6
 		*/
 		Family IPFamily = Family::IPV4;
+
+	private:
+		/**
+		 * @brief 该IP是否有效 比如由域名转化的IP,或用户输入的IP后应当校验
+		*/
+		bool _valid = false;
 	};//class IP
 
 
@@ -700,26 +766,35 @@ namespace meet
 					SOCKET c_socket;
 					IP clientAddress;
 					ushort clientPort = 0;
-					if (_listenAddr.IPFamily == Family::IPV4) {
-						struct sockaddr_in remoteAddr = {};
-						int nAddrlen = sizeof(remoteAddr);
-						c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
-						if (c_socket == INVALID_SOCKET) {   //无效的套接字
-							continue;
-						}
-						clientAddress = IP(remoteAddr);
-						clientPort = remoteAddr.sin_port;
+					//if (_listenAddr.IPFamily == Family::IPV4) {
+					//	struct sockaddr_in remoteAddr = {};
+					//	int nAddrlen = sizeof(remoteAddr);
+					//	c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
+					//	if (c_socket == INVALID_SOCKET) {   //无效的套接字
+					//		continue;
+					//	}
+					//	clientAddress = IP(remoteAddr);
+					//	clientPort = remoteAddr.sin_port;
+					//}
+					//else {
+					//	struct sockaddr_in6 remoteAddr = {};
+					//	int nAddrlen = sizeof(remoteAddr);
+					//	c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
+					//	if (c_socket == INVALID_SOCKET) {   //无效的套接字
+					//		continue;
+					//	}
+					//	clientAddress = IP(remoteAddr);
+					//	clientPort = remoteAddr.sin6_port;
+					//}
+
+					struct sockaddr remoteAddr = {};
+					int nAddrlen = sizeof(remoteAddr);
+					c_socket = ::accept(_socket, &remoteAddr, &nAddrlen); //默认应该会在这里阻塞
+					if (c_socket == INVALID_SOCKET) {   //无效的套接字
+						continue;
 					}
-					else {
-						struct sockaddr_in6 remoteAddr = {};
-						int nAddrlen = sizeof(remoteAddr);
-						c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
-						if (c_socket == INVALID_SOCKET) {   //无效的套接字
-							continue;
-						}
-						clientAddress = IP(remoteAddr);
-						clientPort = remoteAddr.sin6_port;
-					}
+					clientAddress = IP(remoteAddr);
+					clientPort = remoteAddr.sa_family == (int)Family::IPV4 ? ((sockaddr_in*)&remoteAddr)->sin_port : ((sockaddr_in6*)&remoteAddr)->sin6_port;
 
 					if (clientList.size() < _maxCount) {
 
