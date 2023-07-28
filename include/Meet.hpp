@@ -203,11 +203,16 @@ namespace meet
 		 * @param ipdom IP或域名
 		*/
 		IP(const std::string& ipdom) {
-			IP ip = IP::getaddrinfo(ipdom);
-			this->InAddr = ip.InAddr;
-			this->InAddr6 = ip.InAddr6;
-			this->IPFamily = ip.IPFamily;
-			this->_valid = ip._valid;
+			auto ips = IP::getaddrinfo(ipdom);
+			if (ips.size()) {
+				this->InAddr = ips[0].InAddr;
+				this->InAddr6 = ips[0].InAddr6;
+				this->IPFamily = ips[0].IPFamily;
+				this->_valid = ips[0]._valid;
+			}
+			else {
+				this->_valid = false;
+			}
 		}
 
 
@@ -266,7 +271,7 @@ namespace meet
 		 * @brief 将IP地址转为字符串输出
 		 * @return 
 		*/
-		std::string toString() {
+		std::string toString() const {
 			if (!_valid) {
 				return "valid = false";
 			}
@@ -292,20 +297,21 @@ namespace meet
 	public:
 
 		/**
-		 * @brief 尝试将域名转为IP地址
+		 * @brief 尝试将域名转为IP地址 一个域名(主机名)可能解析为多个IP
 		 * @param f 地址协议 IPV4/IPV6
 		 * @param dom 域名
 		 * @return 
 		*/
-		static IP getaddrinfo(const std::string& dom) {
+		static std::vector<IP> getaddrinfo(const std::string& dom) {
+			std::vector<IP> ips;
 			WSADATA wsadata; //Define a structure of type WSADATA to store the Windows Sockets data returned by the WSAStartup function call
 			if (WSAStartup(MAKEWORD(2, 0), &wsadata)) //Initialize the socket, start the build, and load "ws2_32.lib" into memory
 			{
-				return NULL;
+				return ips;
 			}
 			addrinfo hints;
 			memset(&hints, 0, sizeof(addrinfo));
-			hints.ai_family = AF_UNSPEC;			/* Allow IPv4 */ // 自动识别
+			hints.ai_family = AF_UNSPEC;			/* Allow IPv4 V6 */ // 自动识别
 			//hints.ai_flags = AI_CANONNAME;		/* For wildcard IP address */
 			hints.ai_flags = AI_ALL;				/* For wildcard IP address */
 			hints.ai_protocol = 0;					/* Any protocol */ // IPPROTO_TCP、IPPROTO_UDP
@@ -315,11 +321,15 @@ namespace meet
 			auto ret = ::getaddrinfo(dom.c_str(), NULL, &hints, &res);
 			WSACleanup();
 			if (ret != 0) {
-				return NULL;
+				return ips;
 			}
-			IP retipaddr = IP(*res->ai_addr);
+			ips.push_back(IP(*res->ai_addr));
+			while (res->ai_next) {
+				res = res->ai_next;
+				ips.push_back(IP(*res->ai_addr));
+			}
 			freeaddrinfo(res);
-			return retipaddr;
+			return ips;
 		}
 
 		//IP& operator=(const IP& ip) {
@@ -332,6 +342,16 @@ namespace meet
 		//	this->_valid = ip._valid;
 		//	return *this;
 		//}
+
+		bool operator==(const IP& ip) const {
+			if (this->_valid != ip._valid || this->IPFamily != ip.IPFamily) {
+				return false;
+			}
+			if (this->toString() != ip.toString()) {
+				return false;
+			}
+			return true;
+		}
 
 
 	public:
@@ -346,7 +366,7 @@ namespace meet
 		in_addr6 InAddr6 = {};
 
 		/**
-		 * @brief IP协议族 V4/V6
+		 * @brief IP协议族 V4&V6
 		*/
 		Family IPFamily = Family::IPV4;
 
@@ -660,6 +680,10 @@ namespace meet
 			SOCKET clientSocket;
 			IP addr;
 			ushort port;
+
+			bool operator==(const MeetClient& c) const {
+				return this->addr == c.addr && this->port == c.port;
+			}
 		};
 
 		using NewClientConnectEvent = std::function<void(MeetClient)>;
