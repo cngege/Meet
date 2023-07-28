@@ -401,15 +401,20 @@ namespace meet
 		using RecvErrorEvent = std::function<void(int)>;
 	public:
 		TCPClient() {}
+	private:
 		~TCPClient() {
+			Close();
+		}
+	public:
+		void Close() {
+			Connected = false;
 			if (_sockfd) {
 				shutdown(_sockfd, SD_BOTH);
 				closesocket(_sockfd);
 				WSACleanup();
 			}
-			Connected = false;
 		}
-	public:
+
 	public:
 
 		/**
@@ -753,9 +758,7 @@ namespace meet
 				return Error::serverIsStarted;
 			}
 
-			//_listenAddr = listenAddress;
 			_listenPort = listenPort;
-			//_maxCount = maxConnectCount;
 
 			if (WSAStartup(_versionRequested, &_wsaDat) != 0) {
 				return Error::initializationWinsockFailed;

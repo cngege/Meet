@@ -130,11 +130,6 @@ void startServer(){
             int discount = 0;
             size_t clientcount = clientList.size();
             
-            //for (auto &c : clientList) {
-            //    if (s.disClientConnect(c.addr, c.port) == meet::Error::noError) {
-            //        discount++;
-            //    }
-            //}
             for (int i = clientcount - 1; i >= 0; i--) {
                 if (s.disClientConnect(clientList[i].addr, clientList[i].port) == meet::Error::noError) {
                     discount++;
@@ -200,7 +195,7 @@ void startServer(){
                             if (err != meet::Error::noError) {
                                 std::cout << "客户端断开失败:" << meet::getString(err) << std::endl;
                             }
-                            c.~TCPClient();
+                            c.Close();
                             break;
                         }
                         else if (sinput_setup == "1") {
