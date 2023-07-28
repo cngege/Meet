@@ -386,13 +386,13 @@ namespace meet
 		 * @brief 如果手动调用析构函数释放了,那就不要再用这个类是,会出问题的
 		*/
 		~TCPClient() {
-			Close();
+			close();
 		}
 	public:
 		/**
 		 * @brief 关闭套接字连接
 		*/
-		void Close() {
+		void close() {
 			Connected = false;
 			if (_sockfd) {
 				shutdown(_sockfd, SD_BOTH);
@@ -689,7 +689,7 @@ namespace meet
 		 * @brief 如果手动调用析构函数释放了,那就不要再用这个类是,会出问题的
 		*/
 		~TCPServer() {
-			Close();
+			close();
 		}
 
 	public:
@@ -697,7 +697,7 @@ namespace meet
 		/**
 		 * @brief 关闭套接字,停止TCP服务的运行
 		*/
-		void Close() {
+		void close() {
 			_serverRunning = false;
 			if (_socket) {
 				shutdown(_socket, SD_BOTH);
@@ -1077,7 +1077,7 @@ namespace meet
 
 		WSADATA _wsaDat{};
 		ushort _versionRequested = MAKEWORD(2, 2);
-
+		
 		struct sockaddr_in _sock4 = {};
 		struct sockaddr_in6 _sock6 = {};
 

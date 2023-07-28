@@ -99,6 +99,7 @@ void startClient(meet::TCPClient& c) {
 
         if (cinput == "0") {
             c.disConnect();
+            c.close();
             return;
         }
         else if (cinput == "1") {
