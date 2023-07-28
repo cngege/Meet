@@ -126,17 +126,23 @@ void startServer(){
         std::getline(std::cin, sinput);
 
         if (sinput == "0") {
-            auto clientList = s.GetALLClient();
+            auto& clientList = s.GetALLClient();
             int discount = 0;
             size_t clientcount = clientList.size();
             
-            for (auto &c : clientList) {
-                if (s.disClientConnect(c.addr, c.port) == meet::Error::noError) {
+            //for (auto &c : clientList) {
+            //    if (s.disClientConnect(c.addr, c.port) == meet::Error::noError) {
+            //        discount++;
+            //    }
+            //}
+            for (int i = clientcount - 1; i >= 0; i--) {
+                if (s.disClientConnect(clientList[i].addr, clientList[i].port) == meet::Error::noError) {
                     discount++;
                 }
             }
             std::cout << "共成功断开了 " << discount << "/" << clientcount << " 个客户端的连接" << std::endl;
-            s.~TCPServer();
+            std::cout << "debug clientList size: " << clientList.size() << std::endl;
+            s.Close();
             break;
         }
         else if (sinput == "1") {
@@ -184,7 +190,8 @@ void startServer(){
                         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
                         std::string sinput_setup;
                         std::getline(std::cin, sinput_setup);
-                        if (clientList.at(x).clientSocket != client.clientSocket) {
+                        
+                        if (x >= clientList.size() || clientList.at(x).clientSocket != client.clientSocket) {
                             std::cout << "该客户端的连接早已断开" << std::endl;
                             break;
                         }
@@ -386,6 +393,7 @@ void startClient() {
             meet::Error send_error;
             if ((send_error = c.sendText(csendtext)) != meet::Error::noError) {
                 std::cout << meet::getString(send_error) << std::endl;
+                return;
             }
         }
         else if (cinput == "2") {

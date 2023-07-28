@@ -693,7 +693,21 @@ namespace meet
 	public:
 		//TODO 监听地址 监听端口 最大连接数量
 		TCPServer() {}
+
+		/**
+		 * @brief 如果手动调用析构函数释放了,那就不要再用这个类是,会出问题的
+		*/
+	private:
 		~TCPServer() {
+			Close();
+		}
+
+	public:
+
+		/**
+		 * @brief 关闭套接字,停止TCP服务的运行
+		*/
+		void Close() {
 			_serverRunning = false;
 			if (_socket) {
 				shutdown(_socket, SD_BOTH);
@@ -901,6 +915,7 @@ namespace meet
 			return Error::serverIsStarted;
 		}
 
+	private:
 		/**
 		 * @brief 从客户端列表中移除客户端信息
 		 * @param addr 
@@ -908,17 +923,30 @@ namespace meet
 		 * @return 是否有错误 [Error::noFoundClient] / [Error::noError]
 		*/
 		Error removeClientFromClientList(IP addr, ushort port) {
+			
 			for (auto it = clientList.begin(); it != clientList.end(); it++) {
 				if ((*it).addr.toString() == addr.toString() && (*it).port == port) {		// 条件语句
 					// disClientConnect 方法内部会调用这个函数
 					clientList.erase(it);		// 移除他
-					it--;		                // 让该迭代器指向前一个
+					//it--;									// 让该迭代器指向前一个， 只删除一个没必要,而且会出现错误
 					return Error::noError;
 				}
 			}
 			return Error::noFoundClient;
 		}
 
+		Error removeClientFromClientList(MeetClient& client) {
+			for (auto it = clientList.begin(); it != clientList.end(); it++) {
+				if ((*it) == client) {						// 条件语句
+					clientList.erase(it);				// 移除他
+					//it--;									// 让该迭代器指向前一个， 只删除一个没必要,而且会出现错误
+					return Error::noError;
+				}
+			}
+			return Error::noFoundClient;
+		}
+
+	public:
 		/**
 		 * @brief 断开客户端的连接
 		 * @param addr 
@@ -942,6 +970,13 @@ namespace meet
 			}
 			return Error::noFoundClient;
 		};
+
+		//Error disClientConnect(MeetClient& client) {
+		//	if (!_serverRunning) {
+		//		return Error::serverNotStarted;
+		//	}
+
+		//}
 
 
 		/**
@@ -1034,7 +1069,7 @@ namespace meet
 		 * @brief 获取所有已连接的客户端
 		 * @return 客户端列表
 		*/
-		std::vector<MeetClient> GetALLClient() {
+		std::vector<MeetClient>& GetALLClient() {
 			return clientList;
 		}
 
