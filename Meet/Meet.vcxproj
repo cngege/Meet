@@ -146,6 +146,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="test.cpp" />
+    <ClCompile Include="test_tcpClient.cpp" />
+    <ClCompile Include="test_tcpServer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Meet.hpp" />

@@ -241,25 +241,6 @@ namespace meet
 			_valid = true;
 		}
 
-		//IP(sockaddr_in addr_in) {
-		//	IPFamily = Family::IPV4;
-		//	InAddr = addr_in.sin_addr;
-		//	_valid = true;
-		//}
-
-		//IP(sockaddr_in6 addr_in) {
-		//	IPFamily = Family::IPV6;
-		//	InAddr6 = addr_in.sin6_addr;
-		//	_valid = true;
-		//}
-
-		//IP(IP& thi) {
-		//	InAddr = thi.InAddr;
-		//	InAddr6 = thi.InAddr6;
-		//	IPFamily = thi.IPFamily;
-		//	_valid = thi._valid;
-		//}
-
 		IP(){
 			_valid = false;
 		}
@@ -401,7 +382,9 @@ namespace meet
 		using RecvErrorEvent = std::function<void(int)>;
 	public:
 		TCPClient() {}
-	private:
+		/**
+		 * @brief 如果手动调用析构函数释放了,那就不要再用这个类是,会出问题的
+		*/
 		~TCPClient() {
 			Close();
 		}
@@ -705,7 +688,6 @@ namespace meet
 		/**
 		 * @brief 如果手动调用析构函数释放了,那就不要再用这个类是,会出问题的
 		*/
-	private:
 		~TCPServer() {
 			Close();
 		}

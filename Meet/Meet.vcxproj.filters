@@ -14,6 +14,12 @@
     <ClCompile Include="test.cpp">
       <Filter>test</Filter>
     </ClCompile>
+    <ClCompile Include="test_tcpServer.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test_tcpClient.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Meet.hpp">
