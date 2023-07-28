@@ -406,6 +406,9 @@ namespace meet
 			Close();
 		}
 	public:
+		/**
+		 * @brief 关闭套接字连接
+		*/
 		void Close() {
 			Connected = false;
 			if (_sockfd) {
