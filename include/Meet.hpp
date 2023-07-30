@@ -1,20 +1,20 @@
 ﻿#pragma once
 
 #include <string>
-#include <WinSock2.h>
-#include <WS2tcpip.h>
 #include <thread>
 #include <functional>
 
+#include <WinSock2.h>
+#include <WS2tcpip.h>
 #pragma comment(lib,"ws2_32.lib")
 
 #ifndef ushort
-#define ushort unsigned short
+//#define ushort unsigned short
 #endif
 
-#ifndef ulong
-#define ulong unsigned long
-#endif
+//#ifndef ulong
+//#define ulong unsigned long
+//#endif
 
 #ifndef MEET_LISTEN_BACKLOG
 #define MEET_LISTEN_BACKLOG 5
@@ -38,9 +38,11 @@ namespace meet
 	};
 
 	enum class Error : int {
-		noError = 0,
-		unkError = -1,
 		initializationWinsockFailed = -16,	// 初始化 Winsock 失败
+		unkError = -1,
+		noError = 0,
+		inited,
+		ipInvalid,
 		socketError,
 		bindError,
 		listenError,
@@ -64,88 +66,95 @@ namespace meet
 
 	static std::string getString(Error errorCode) {
 		switch (errorCode) {
-			using enum Error;
-		case noError:
-		{
-			return "noError";
-		}
-		case unkError:
-		{
-			return "unkError";
-		}
-		case initializationWinsockFailed:
+		case Error::initializationWinsockFailed:
 		{
 			return "initializationWinsockFailed";
 		}
-		case socketError:
+		case Error::unkError:
+		{
+			return "unkError";
+		}
+		case Error::noError:
+		{
+			return "noError";
+		}
+		case Error::inited:
+		{
+			return "inited";
+		}
+		case Error::ipInvalid:
+		{
+			return "ipInvalid";
+		}
+		case Error::socketError:
 		{
 			return "socketError";
 		}
-		case bindError:
+		case Error::bindError:
 		{
 			return "bindError";
 		}
-		case listenError:
+		case Error::listenError:
 		{
 			return "listenError";
 		}
-		case acceptError:
+		case Error::acceptError:
 		{
 			return "acceptError";
 		}
-		case sendFailed:
+		case Error::sendFailed:
 		{
 			return "sendFailed";
 		}
-		case recvFailed:
+		case Error::recvFailed:
 		{
 			return "recvFailed";
 		}
-		case portTooSmall:
+		case Error::portTooSmall:
 		{
 			return "portTooSmall";
 		}
-		case maxcouTooBig:
+		case Error::maxcouTooBig:
 		{
 			return "maxcouTooBig";
 		}
-		case connectFailed:
+		case Error::connectFailed:
 		{
 			return "connectFailed";
 		}
-		case unsupportedOperations:
+		case Error::unsupportedOperations:
 		{
 			return "unsupportedOperations";
 		}
-		case connecting:
+		case Error::connecting:
 		{
 			return "connecting";
 		}
-		case noConnected:
+		case Error::noConnected:
 		{
 			return "noConnected";
 		}
-		case changeError:
+		case Error::changeError:
 		{
 			return "changeError";
 		}
-		case theMaximumNumberOfConnectionsHasBeenReached:
+		case Error::theMaximumNumberOfConnectionsHasBeenReached:
 		{
 			return "theMaximumNumberOfConnectionsHasBeenReached";
 		}
-		case serverIsStarted:
+		case Error::serverIsStarted:
 		{
 			return "serverIsStarted";
 		}
-		case serverNotStarted:
+		case Error::serverNotStarted:
 		{
 			return "serverNotStarted";
 		}
-		case noFoundClient:
+		case Error::noFoundClient:
 		{
 			return "noFoundClient";
 		}
-		case dataTooLong:
+		case Error::dataTooLong:
 		{
 			return "dataTooLong";
 		}
@@ -254,7 +263,7 @@ namespace meet
 		*/
 		std::string toString() const {
 			if (!_valid) {
-				return "valid = false";
+				return std::string();
 			}
 			if (IPFamily == Family::IPV4) {
 				char IPStrBuf[INET_ADDRSTRLEN] = { '\0' };
@@ -264,7 +273,23 @@ namespace meet
 				char IPStrBuf[INET6_ADDRSTRLEN] = { '\0' };
 				return std::string(inet_ntop(AF_INET6, (void*)&InAddr6, IPStrBuf, sizeof(IPStrBuf)));
 			}
+		}
 
+		SOCKADDR toSOCKADDR(u_short port = 0) {
+			if (this->IPFamily == Family::IPV4) {
+				sockaddr_in sockv4{};
+				sockv4.sin_family = (ADDRESS_FAMILY)Family::IPV4;
+				sockv4.sin_addr = InAddr;
+				sockv4.sin_port = htons(port);
+				return *(SOCKADDR*)&sockv4;
+			}
+			else{
+				sockaddr_in6 sockv6{};
+				sockv6.sin6_family = (ADDRESS_FAMILY)Family::IPV6;
+				sockv6.sin6_addr = InAddr6;
+				sockv6.sin6_port = htons(port);
+				return *(SOCKADDR*)&sockv6;
+			}
 		}
 
 		/**
@@ -305,9 +330,10 @@ namespace meet
 				return ips;
 			}
 			ips.push_back(IP(*res->ai_addr));
-			while (res->ai_next) {
-				res = res->ai_next;
-				ips.push_back(IP(*res->ai_addr));
+			addrinfo* chires = res;
+			while (chires->ai_next) {
+				chires = chires->ai_next;
+				ips.push_back(IP(*chires->ai_addr));
 			}
 			freeaddrinfo(res);
 			return ips;
@@ -409,7 +435,7 @@ namespace meet
 		 * @param port port
 		 * @return 
 		*/
-		Error connect(IP ip, ushort port) {
+		Error connect(IP ip, u_short port) {
 			if (Connected) {
 				return Error::connecting;
 			}
@@ -428,7 +454,7 @@ namespace meet
 			if ((_sockfd = socket((ADDRESS_FAMILY)ip.IPFamily, SOCK_STREAM, IPPROTO_TCP)) == SOCKET_ERROR) {
 				return Error::socketError;
 			}
-
+			/*
 			if (ip.IPFamily == Family::IPV4) {
 				memset(&_sock4, 0, sizeof(_sock4));
 				_sock4.sin_family = (ADDRESS_FAMILY)ip.IPFamily;
@@ -449,9 +475,14 @@ namespace meet
 					return Error::connectFailed;
 				}
 			}
+			*/
+			SOCKADDR sock = ip.toSOCKADDR(port);
+			if (::connect(_sockfd, &sock, (ip.IPFamily == Family::IPV4)? sizeof(sockaddr_in): sizeof(sockaddr_in6)) == INVALID_SOCKET) {
+				closesocket(_sockfd);
+				return Error::connectFailed;
+			}
 
 			Connected = true;
-
 			// Set the connection to non-blocking mode recv return in time
 			if (!_blockingmode) {
 				u_long iMode = 1;
@@ -470,7 +501,7 @@ namespace meet
 		 * @param port 远程主机端口 / Remote host port
 		 * @return 
 		*/
-		Error connectV4(const std::string& ip, ushort port) {
+		Error connectV4(const std::string& ip, u_short port) {
 			//IP ipaddrB(Family::IPV4,ip);
 			return connect(ip, port);
 		}
@@ -481,7 +512,7 @@ namespace meet
 		 * @param port 远程主机端口 / Remote host port
 		 * @return 
 		*/
-		Error connectV6(const std::string& ip, ushort port) {
+		Error connectV6(const std::string& ip, u_short port) {
 			return connect(ip, port);
 		}
 
@@ -670,7 +701,7 @@ namespace meet
 		{
 			SOCKET clientSocket;
 			IP addr;
-			ushort port;
+			u_short port;
 
 			bool operator==(const MeetClient& c) const {
 				return this->addr == c.addr && this->port == c.port;
@@ -738,7 +769,7 @@ namespace meet
 		 * @param listenPort 监听端口 0-65535
 		 * @return 是否有错误
 		*/
-		Error Listen(ushort listenPort) {
+		Error Listen(u_short listenPort) {
 			if (_serverRunning) {
 				return Error::serverIsStarted;
 			}
@@ -797,7 +828,7 @@ namespace meet
 
 					SOCKET c_socket;
 					IP clientAddress;
-					ushort clientPort = 0;
+					u_short clientPort = 0;
 					//if (_listenAddr.IPFamily == Family::IPV4) {
 					//	struct sockaddr_in remoteAddr = {};
 					//	int nAddrlen = sizeof(remoteAddr);
@@ -910,7 +941,7 @@ namespace meet
 		 * @param port 
 		 * @return 是否有错误 [Error::noFoundClient] / [Error::noError]
 		*/
-		Error removeClientFromClientList(IP addr, ushort port) {
+		Error removeClientFromClientList(IP addr, u_short port) {
 			
 			for (auto it = clientList.begin(); it != clientList.end(); it++) {
 				if ((*it).addr.toString() == addr.toString() && (*it).port == port) {		// 条件语句
@@ -941,7 +972,7 @@ namespace meet
 		 * @param port 
 		 * @return 是否有错误 [Error::serverNotStarted] / [Error::noError] / [Error::unkError] / [Error::noFoundClient]
 		*/
-		Error disClientConnect(IP addr, ushort port) {
+		Error disClientConnect(IP addr, u_short port) {
 			if (!_serverRunning) {
 				return Error::serverNotStarted;
 			}
@@ -1069,14 +1100,14 @@ namespace meet
 		/**
 		 * @brief 监听端口
 		*/
-		ushort _listenPort = 0;
+		u_short _listenPort = 0;
 		/**
 		 * @brief 最大客户端连接数量
 		*/
 		int _maxCount = MEET_LISTEN_DEFAULT_MAXCONNECT;
 
 		WSADATA _wsaDat{};
-		ushort _versionRequested = MAKEWORD(2, 2);
+		u_short _versionRequested = MAKEWORD(2, 2);
 		
 		struct sockaddr_in _sock4 = {};
 		struct sockaddr_in6 _sock6 = {};
@@ -1107,5 +1138,146 @@ namespace meet
 		RecvDataEvent _recvDataEvent = NULL;
 		RecvErrorEvent _recvErrorEvent = NULL;
 	};//class TCPServer
+
+
+	class UDPClient {
+
+	public:
+		UDPClient(){}
+		~UDPClient() {
+			close();
+		}
+
+		void close() {
+			_init = false;
+			if (_sockfd) {
+				socketbindAddr = false;
+				closesocket(_sockfd);
+				WSACleanup();
+			}
+		}
+
+	public:
+
+		using RecvDataEvent = std::function<void(ULONG64, const char*, IP, u_short)>;
+
+	public:
+		Error Init() {
+			if (_init) {
+				return Error::inited;
+			}
+			//Initializing the socket library
+			WSADATA wsadata; //Define a structure of type WSADATA to store the Windows Sockets data returned by the WSAStartup function call
+			WORD sock_version = MAKEWORD(2, 0); //Set the version number
+			if (WSAStartup(sock_version, &wsadata)) //Initialize the socket, start the build, and load "ws2_32.lib" into memory
+			{
+				return Error::initializationWinsockFailed;
+			}
+
+			//Create sockets 尝试使用AF_UNSPEC同时支持ipv4和v6
+			//if ((_sockfd = ::socket(AF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) {
+			if ((_sockfd = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) {
+				return Error::socketError;	// -1
+			}
+
+			_init = true;
+
+			// 创建线程 从套接字接受数据
+			auto _recv_thread = std::thread([&]() {
+				char buffer[RecvBuffSize];
+				memset(buffer, '\0', RecvBuffSize);
+				while (true)
+				{
+					if (!_init) {
+						break;
+					}
+					// 表示发送过数据, 套接字中存储了地址信息
+					if (socketbindAddr) {
+						int recvbytecount;
+						SOCKADDR remoteAddr;
+						int len = sizeof(remoteAddr);
+						recvbytecount = ::recvfrom(_sockfd, buffer, RecvBuffSize, 0, &remoteAddr, &len);
+						if (recvbytecount == SOCKET_ERROR) {
+							int errid = WSAGetLastError();
+							//说明套接字被关闭,不是错误
+							if (errid == WSAEINTR) {
+								break;
+							}
+							else {
+								// 接受失败 并出现了错误
+								printf_s("recvfrom: %d\n", errid);
+							}
+						}
+						if (recvbytecount >= 0) {
+							if (_recvDataEvent != NULL) {
+								u_short port = (remoteAddr.sa_family == (ADDRESS_FAMILY)Family::IPV4) ? ((SOCKADDR_IN*)&remoteAddr)->sin_port : ((SOCKADDR_IN6*)&remoteAddr)->sin6_port;
+								_recvDataEvent(recvbytecount, buffer, remoteAddr, port);
+							}
+						}
+					}
+				}
+
+			});
+			_recv_thread.detach();
+
+			return Error::noError;
+			//::sendto
+		}
+
+		Error sendData(IP ip, u_short port, char* data, int len) {
+			if (!ip.isValid()) {
+				return Error::ipInvalid;
+			}
+			SOCKADDR_IN sendAddr4{};
+			SOCKADDR_IN6 sendAddr6{};
+			if (ip.IPFamily == Family::IPV4) {
+				sendAddr4.sin_addr = ip.InAddr;
+				sendAddr4.sin_port = htons(port);
+				sendAddr4.sin_family = (ADDRESS_FAMILY)Family::IPV4;
+			}
+			else {
+				sendAddr6.sin6_addr = ip.InAddr6;
+				sendAddr6.sin6_port = htons(port);
+				sendAddr6.sin6_family = (ADDRESS_FAMILY)Family::IPV6;
+			}
+
+			int ret = sendto(_sockfd, data, len, 0, (ip.IPFamily == Family::IPV4)? (SOCKADDR*)&sendAddr4 : (SOCKADDR*)&sendAddr6, sizeof(SOCKADDR));
+			if (ret == SOCKET_ERROR) {
+				// 发送错误,应该关闭套接字
+				printf_s("sendto:%d\n", WSAGetLastError());
+			}
+			socketbindAddr = true;
+			return Error::noError;
+		}
+		
+		// 红娘 通过中间人发送读取数据
+		void matchmaker() {
+
+		}
+	public:
+		void OnRecvData(RecvDataEvent recvDataEvent) {
+			_recvDataEvent = recvDataEvent;
+		}
+
+	private:
+
+		RecvDataEvent _recvDataEvent = NULL;
+		
+	private:
+		bool _init = false;
+		bool socketbindAddr = false;
+		static const int RecvBuffSize = 1024;
+
+
+		SOCKET _sockfd{};
+	};
+
+
+	class UDPServer {
+	public:
+		void bind(IP ip, u_short port) {
+
+		}
+	};
 
 }//namespace meet

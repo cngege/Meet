@@ -109,7 +109,7 @@ void startServer(meet::TCPServer& s) {
             int discount = 0;
             size_t clientcount = clientList.size();
 
-            for (int i = clientcount - 1; i >= 0; i--) {
+            for (INT64 i = clientcount - 1; i >= 0; i--) {
                 if (s.disClientConnect(clientList[i].addr, clientList[i].port) == meet::Error::noError) {
                     discount++;
                 }
