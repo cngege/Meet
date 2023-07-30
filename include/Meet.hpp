@@ -275,21 +275,30 @@ namespace meet
 			}
 		}
 
-		SOCKADDR toSOCKADDR(u_short port = 0) {
-			if (this->IPFamily == Family::IPV4) {
-				sockaddr_in sockv4{};
-				sockv4.sin_family = (ADDRESS_FAMILY)Family::IPV4;
-				sockv4.sin_addr = InAddr;
-				sockv4.sin_port = htons(port);
-				return *(SOCKADDR*)&sockv4;
+		/**
+		 * @brief 随参数附加一个端口 转为SOCK用地址,使用这个方法请充分考虑到sockaddr生存周期,sockaddr长度不能装下IPv6的问题
+		 * @param saddr 可以是一个空的sockaddr指针
+		 * @param port 端口,非必须
+		 * @return 
+		*/
+		sockaddr* toSockaddr(sockaddr* saddr, u_short port = 0) {
+			if (_valid) {
+				if (this->IPFamily == Family::IPV4) {
+					((sockaddr_in*)saddr)->sin_family = (ADDRESS_FAMILY)Family::IPV4;
+					((sockaddr_in*)saddr)->sin_addr = InAddr;
+					((sockaddr_in*)saddr)->sin_port = htons(port);
+				}
+				else if(this->IPFamily == Family::IPV6) {
+					((sockaddr_in6*)saddr)->sin6_family = (ADDRESS_FAMILY)Family::IPV6;
+					((sockaddr_in6*)saddr)->sin6_addr = InAddr6;
+					((sockaddr_in6*)saddr)->sin6_port = htons(port);
+				}
 			}
-			else{
-				sockaddr_in6 sockv6{};
-				sockv6.sin6_family = (ADDRESS_FAMILY)Family::IPV6;
-				sockv6.sin6_addr = InAddr6;
-				sockv6.sin6_port = htons(port);
-				return *(SOCKADDR*)&sockv6;
-			}
+			return saddr;
+		}
+
+		int toSockaddrLen() {
+			return (this->IPFamily == Family::IPV4) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 		}
 
 		/**
@@ -454,30 +463,31 @@ namespace meet
 			if ((_sockfd = socket((ADDRESS_FAMILY)ip.IPFamily, SOCK_STREAM, IPPROTO_TCP)) == SOCKET_ERROR) {
 				return Error::socketError;
 			}
-			/*
-			if (ip.IPFamily == Family::IPV4) {
-				memset(&_sock4, 0, sizeof(_sock4));
-				_sock4.sin_family = (ADDRESS_FAMILY)ip.IPFamily;
-				_sock4.sin_port = htons(port);
-				_sock4.sin_addr = ip.InAddr;
-				if (::connect(_sockfd, (struct sockaddr*)&_sock4, sizeof(_sock4)) == INVALID_SOCKET) {
-					closesocket(_sockfd);
-					return Error::connectFailed;
-				}
-			}
-			else {
-				memset(&_sock6, 0, sizeof(_sock6));
-				_sock6.sin6_family = (ADDRESS_FAMILY)ip.IPFamily;
-				_sock6.sin6_port = htons(port);
-				_sock6.sin6_addr = ip.InAddr6;
-				if (::connect(_sockfd, (struct sockaddr*)&_sock6, sizeof(_sock6)) == INVALID_SOCKET) {
-					closesocket(_sockfd);
-					return Error::connectFailed;
-				}
-			}
-			*/
-			SOCKADDR sock = ip.toSOCKADDR(port);
-			if (::connect(_sockfd, &sock, (ip.IPFamily == Family::IPV4)? sizeof(sockaddr_in): sizeof(sockaddr_in6)) == INVALID_SOCKET) {
+			
+			//if (ip.IPFamily == Family::IPV4) {
+			//	memset(&_sock4, 0, sizeof(_sock4));
+			//	_sock4.sin_family = (ADDRESS_FAMILY)ip.IPFamily;
+			//	_sock4.sin_port = htons(port);
+			//	_sock4.sin_addr = ip.InAddr;
+			//	if (::connect(_sockfd, (struct sockaddr*)&_sock4, sizeof(_sock4)) == INVALID_SOCKET) {
+			//		closesocket(_sockfd);
+			//		return Error::connectFailed;
+			//	}
+			//}
+			//else {
+			//	memset(&_sock6, 0, sizeof(_sock6));
+			//	_sock6.sin6_family = (ADDRESS_FAMILY)ip.IPFamily;
+			//	_sock6.sin6_port = htons(port);
+			//	_sock6.sin6_addr = ip.InAddr6;
+			//	if (::connect(_sockfd, (struct sockaddr*)&_sock6, sizeof(_sock6)) == INVALID_SOCKET) {
+			//		closesocket(_sockfd);
+			//		return Error::connectFailed;
+			//	}
+			//}
+			
+			// 这里没有判断而直接使用 sockaddr_in6 是因为 sockaddr能装得下v4 但装不下v6 故直接使用v6(虽然在使用v4连接的时候会浪费一点内存)
+			sockaddr_in6 saddr{};
+			if (::connect(_sockfd, ip.toSockaddr((sockaddr*)&saddr, port), ip.toSockaddrLen()) == INVALID_SOCKET) {
 				closesocket(_sockfd);
 				return Error::connectFailed;
 			}
@@ -829,35 +839,28 @@ namespace meet
 					SOCKET c_socket;
 					IP clientAddress;
 					u_short clientPort = 0;
-					//if (_listenAddr.IPFamily == Family::IPV4) {
-					//	struct sockaddr_in remoteAddr = {};
-					//	int nAddrlen = sizeof(remoteAddr);
-					//	c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
-					//	if (c_socket == INVALID_SOCKET) {   //无效的套接字
-					//		continue;
-					//	}
-					//	clientAddress = IP(remoteAddr);
-					//	clientPort = remoteAddr.sin_port;
-					//}
-					//else {
-					//	struct sockaddr_in6 remoteAddr = {};
-					//	int nAddrlen = sizeof(remoteAddr);
-					//	c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
-					//	if (c_socket == INVALID_SOCKET) {   //无效的套接字
-					//		continue;
-					//	}
-					//	clientAddress = IP(remoteAddr);
-					//	clientPort = remoteAddr.sin6_port;
-					//}
 
-					struct sockaddr remoteAddr = {};
-					int nAddrlen = sizeof(remoteAddr);
-					c_socket = ::accept(_socket, &remoteAddr, &nAddrlen); //默认应该会在这里阻塞
-					if (c_socket == INVALID_SOCKET) {   //无效的套接字
-						continue;
+					// 这个判断不能简写 struct sockaddr remoteAddr = {}; 因为sockaddr长度不够会导致ipv6连接进来但无法获取到
+					if (_listenAddr.IPFamily == Family::IPV4) {
+						struct sockaddr_in remoteAddr = {};
+						int nAddrlen = sizeof(remoteAddr);
+						c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
+						if (c_socket == INVALID_SOCKET) {   //无效的套接字
+							continue;
+						}
+						clientAddress = IP(remoteAddr.sin_addr);
+						clientPort = remoteAddr.sin_port;
 					}
-					clientAddress = IP(remoteAddr);
-					clientPort = remoteAddr.sa_family == (int)Family::IPV4 ? ((sockaddr_in*)&remoteAddr)->sin_port : ((sockaddr_in6*)&remoteAddr)->sin6_port;
+					else {
+						struct sockaddr_in6 remoteAddr = {};
+						int nAddrlen = sizeof(remoteAddr);
+						c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
+						if (c_socket == INVALID_SOCKET) {   //无效的套接字
+							continue;
+						}
+						clientAddress = IP(remoteAddr.sin6_addr);
+						clientPort = remoteAddr.sin6_port;
+					}
 
 					if (clientList.size() < _maxCount) {
 

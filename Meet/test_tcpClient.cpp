@@ -75,6 +75,8 @@ void startClient(meet::TCPClient& c) {
     // 连接服务端 并对连接结果进行判断
     if ((connect_error = c.connect(connIp, port)) != meet::Error::noError) {
         std::cout << "连接错误:" << meet::getString(connect_error) << std::endl;
+        std::cout << "debug Family: ";
+        std::cout << ((connIp.IPFamily == meet::Family::IPV4) ? "IPV4" : "IPV6") << std::endl;
         return;
     }
 
