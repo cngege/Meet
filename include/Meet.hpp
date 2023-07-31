@@ -286,12 +286,16 @@ namespace meet
 				if (this->IPFamily == Family::IPV4) {
 					((sockaddr_in*)saddr)->sin_family = (ADDRESS_FAMILY)Family::IPV4;
 					((sockaddr_in*)saddr)->sin_addr = InAddr;
-					((sockaddr_in*)saddr)->sin_port = htons(port);
+					if (port != 0) {
+						((sockaddr_in*)saddr)->sin_port = htons(port);
+					}
 				}
 				else if(this->IPFamily == Family::IPV6) {
 					((sockaddr_in6*)saddr)->sin6_family = (ADDRESS_FAMILY)Family::IPV6;
 					((sockaddr_in6*)saddr)->sin6_addr = InAddr6;
-					((sockaddr_in6*)saddr)->sin6_port = htons(port);
+					if (port != 0) {
+						((sockaddr_in6*)saddr)->sin6_port = htons(port);
+					}
 				}
 			}
 			return saddr;
