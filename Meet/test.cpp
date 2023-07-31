@@ -67,7 +67,13 @@ int main() {
         // UDP Client
         else if (userinput == "4") {
             system("title UDP Client / 客户端");
+            std::string host = "au.hivebedrock.network";
+            host = "::1";
+
+            u_short port = 19133;
+
             meet::UDPClient uc;
+            uc.setIPv6Support(true);
             uc.Init();
             uc.OnRecvData([](ULONG64 len, const char* data, meet::IP ip, u_short port) {
                 std::string d;
@@ -85,7 +91,7 @@ int main() {
                 });
             //uc.Init();
             char pack[] = { (char)0x01, (char)0x00, (char)0x00, (char)0x00, (char)0x00, (char)0x24, (char)0x0d, (char)0x12, (char)0xd3, (char)0x00, (char)0xff, (char)0xff, (char)0x00, (char)0xfe, (char)0xfe, (char)0xfe, (char)0xfe, (char)0xfd, (char)0xfd, (char)0xfd, (char)0xfd, (char)0x12, (char)0x34, (char)0x56, (char)0x78 };
-            uc.sendData(std::string("au.hivebedrock.network"), 19132, pack, 25);
+            uc.sendData(host, port, pack, 25);
             Sleep(1000);
             uc.close();
         }
