@@ -26,6 +26,7 @@
 
 void startClient(meet::TCPClient& c);
 void startServer(meet::TCPServer& s);
+void startUDPClient();
 
 int main() {
     for (;;) {
@@ -67,33 +68,7 @@ int main() {
         // UDP Client
         else if (userinput == "4") {
             system("title UDP Client / 客户端");
-            std::string host = "au.hivebedrock.network";
-            host = "::1";
-
-            u_short port = 19133;
-
-            meet::UDPClient uc;
-            uc.setIPv6Support(true);
-            uc.Init();
-            uc.OnRecvData([](ULONG64 len, const char* data, meet::IP ip, u_short port) {
-                std::string d;
-                for (int i = 0; i < len; i++) {
-                    if (len - i > 4) {
-                        if (std::string(data + i).substr(0, 4) == "MCPE") {
-                            d = std::string(data + i);
-                            break;
-                        }
-                    }
-                }
-                std::cout << d << std::endl;
-                //size_t mcpepos = std::string(data).find("MCPE", 0);
-                //std::cout << std::string(data).substr(mcpepos) << std::endl;
-                });
-            //uc.Init();
-            char pack[] = { (char)0x01, (char)0x00, (char)0x00, (char)0x00, (char)0x00, (char)0x24, (char)0x0d, (char)0x12, (char)0xd3, (char)0x00, (char)0xff, (char)0xff, (char)0x00, (char)0xfe, (char)0xfe, (char)0xfe, (char)0xfe, (char)0xfd, (char)0xfd, (char)0xfd, (char)0xfd, (char)0x12, (char)0x34, (char)0x56, (char)0x78 };
-            uc.sendData(host, port, pack, 25);
-            Sleep(1000);
-            uc.close();
+            startUDPClient();
         }
         else if (userinput == "5" || userinput == "cls") {
             system("cls");

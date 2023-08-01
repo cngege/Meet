@@ -32,9 +32,9 @@ namespace meet
 	/// IP地址类型
 	/// </summary>
 	enum class Family {
-		UNSPEC = 0,
-		IPV4 = 2,
-		IPV6 = 23
+		UNSPEC = AF_UNSPEC,
+		IPV4 = AF_INET,
+		IPV6 = AF_INET6
 	};
 
 	enum class Error : int {
@@ -200,24 +200,6 @@ namespace meet
 		};
 
 		/**
-		 * @brief IP地址 而不是域名
-		 * @param addr 字符串格式的IP地址 比如:0.0.0.0 / ::
-		*/
-		//IP(const std::string& addr) {
-		//	IPFamily = Family::IPV4;
-		//	auto ret = ::inet_pton(AF_INET, addr.c_str(), &InAddr);
-		//	if (ret == 0) {
-		//		IPFamily = Family::IPV6;
-		//		ret = ::inet_pton(AF_INET6, addr.c_str(), &InAddr6);
-		//		if (ret == 0) {
-		//			_valid = false;
-		//			return;
-		//		}
-		//	}
-		//	_valid = true;
-		//}
-
-		/**
 		 * @brief IP?域名? 直接转化,并识别V4还是V6
 		 * @param ipdom IP或域名
 		*/
@@ -234,6 +216,8 @@ namespace meet
 			}
 		}
 
+		IP(const char* ipdom) : IP(std::string(ipdom)) {}
+
 
 		IP(IN_ADDR inaddr) {
 			IPFamily = Family::IPV4;
@@ -247,15 +231,16 @@ namespace meet
 			_valid = true;
 		}
 
-		IP(const sockaddr& addr) {
-			if (addr.sa_family == (int)Family::IPV4) {
+		// 需要研究下如果是ipv6那么传进来的数据会不会丢失
+		IP(sockaddr* addr) {
+			if (addr->sa_family == (int)Family::IPV4) {
 				IPFamily = Family::IPV4;
-				InAddr = ((sockaddr_in*)&addr)->sin_addr;
+				InAddr = ((sockaddr_in*)addr)->sin_addr;
 			}
 			else 
 			{
 				IPFamily = Family::IPV6;
-				InAddr6 = ((sockaddr_in6*)&addr)->sin6_addr;
+				InAddr6 = ((sockaddr_in6*)addr)->sin6_addr;
 			}
 			_valid = true;
 		}
@@ -352,12 +337,10 @@ namespace meet
 			if (ret != 0) {
 				return ips;
 			}
-			ips.push_back(IP(*res->ai_addr));
-			addrinfo* chires = res;
-			while (chires->ai_next) {
-				chires = chires->ai_next;
-				ips.push_back(IP(*chires->ai_addr));
+			for (addrinfo* chires = res; chires != NULL; chires = chires->ai_next) {
+				ips.push_back(IP(chires->ai_addr));
 			}
+			
 			freeaddrinfo(res);
 			return ips;
 		}
@@ -573,7 +556,7 @@ namespace meet
 			int len = static_cast<int>(textlen);
 			char* p = text.data();
 			while (len > 0) {
-				int sendcount = send(_sockfd, p, len, 0);
+				int sendcount = ::send(_sockfd, p, len, 0);
 				if (sendcount < 0) {
 					return Error::sendFailed;
 				}
@@ -596,7 +579,7 @@ namespace meet
 			char* p = data;
 			int len = size;
 			while (len > 0) {
-				int sendcount = send(_sockfd, p, len, 0);
+				int sendcount = ::send(_sockfd, p, len, 0);
 				if (sendcount < 0) {				// 等于0 表示剩余缓冲区空间不足,要等待协议将数据发送完
 					return Error::sendFailed;
 				}
@@ -865,7 +848,7 @@ namespace meet
 							continue;
 						}
 						clientAddress = IP(remoteAddr.sin_addr);
-						clientPort = remoteAddr.sin_port;
+						clientPort = ntohs(remoteAddr.sin_port);
 					}
 					else {
 						struct sockaddr_in6 remoteAddr = {};
@@ -875,7 +858,7 @@ namespace meet
 							continue;
 						}
 						clientAddress = IP(remoteAddr.sin6_addr);
-						clientPort = remoteAddr.sin6_port;
+						clientPort = ntohs(remoteAddr.sin6_port);
 					}
 
 					if (clientList.size() < _maxCount) {
@@ -1189,6 +1172,11 @@ namespace meet
 
 	public:
 
+		/**
+		 * @brief 启用IPv4支持,启用表示会开启一个SOCKET用于IPv4通讯,如果确认不会需要IPv4可以关闭以节省开销
+		 * @param ipv4support (IPv4Support默认开启)
+		 * @return [Error::inited] [Error::noError]
+		*/
 		Error setIPv4Support(bool ipv4support) {
 			if (_init) {
 				return Error::inited;
@@ -1197,6 +1185,11 @@ namespace meet
 			return Error::noError;
 		}
 
+		/**
+		 * @brief 启用IPv6支持,启用表示会开启一个SOCKET用于IPv6通讯,如果确认不会需要IPv6可以关闭以节省开销
+		 * @param ipv6support (IPv6Support默认关闭)
+		 * @return [Error::inited] [Error::noError]
+		*/
 		Error setIPv6Support(bool ipv6support) {
 			if (_init) {
 				return Error::inited;
@@ -1205,6 +1198,26 @@ namespace meet
 			return Error::noError;
 		}
 
+		/**
+		 * @brief 设置阻塞模式(默认阻塞)
+		 * @param blocking 
+		 * @return [Error::noError] [Error::inited]
+		*/
+		Error setBlockingMode(bool blocking) {
+			if (!_init) {
+				_blockingmode = blocking;
+				return Error::noError;
+			}
+			return Error::inited;
+		}
+
+		Error allowbroadcast(bool allow) {
+			if (!_init) {
+				_allowbroadcast = allow;
+				return Error::noError;
+			}
+			return Error::inited;
+		}
 
 		/**
 		 * @brief 默认 Only IPV4 ,请在init之前setIPv4Support(true)/setIPv6Support(true),以开启/关闭对ipv4,ipv6的支持
@@ -1225,12 +1238,6 @@ namespace meet
 				return Error::initializationWinsockFailed;
 			}
 
-			//Create sockets 尝试使用AF_UNSPEC同时支持ipv4和v6
-			//if ((_sockfd = ::socket(AF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) {
-			//if ((_sockfd = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) {
-			//	return Error::socketError;	// -1
-			//}
-
 			if (supportipv4) {
 				if ((_sockfd4 = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) {
 					return Error::socketError;	// -1
@@ -1247,73 +1254,28 @@ namespace meet
 				}
 			}
 
-
 			_init = true;
 
-			// 创建线程 从套接字接受数据
-			auto _recv_thread = std::thread([&]() {
-				char buffer[RecvBuffSize];
-				memset(buffer, '\0', RecvBuffSize);
-				while (true)
-				{
-					if (!_init) {
-						break;
-					}
-					// 好复杂的逻辑, 在支持相关地址族的情况下,判断其中socket是否为0,也就是其是否关闭,来判断跳出循环
-					if ((!supportipv4 || !_sockfd4) && (!supportipv6 || !_sockfd6)) {
-						break;
-					}
-					// 处理IPV4
-					if (socketv4bindAddr && supportipv4) {
-						int recvbytecount;
-						sockaddr_in remoteAddr{};
-						int len = sizeof(remoteAddr);
-						recvbytecount = ::recvfrom(_sockfd4, buffer, RecvBuffSize, 0, (SOCKADDR*)&remoteAddr, &len);
-						if (recvbytecount == SOCKET_ERROR) {
-							int errid = WSAGetLastError();
-							//说明套接字被关闭,不是错误
-							if (errid == WSAEINTR) {
-								socketv4bindAddr = false;
-							}
-							else {
-								// 接受失败 并出现了错误
-								printf_s("recvfrom v4: %d\n", errid);
-							}
-						}
-						if (recvbytecount >= 0) {
-							if (_recvDataEvent != NULL) {
-								_recvDataEvent(recvbytecount, buffer, remoteAddr.sin_addr, (u_short)remoteAddr.sin_port);
-							}
-						}
-					}
-					// 处理IPV6
-					if (socketv6bindAddr && supportipv6) {
-						int recvbytecount;
-						sockaddr_in6 remoteAddr{};
-						int len = sizeof(remoteAddr);
-						recvbytecount = ::recvfrom(_sockfd6, buffer, RecvBuffSize, 0, (SOCKADDR*)&remoteAddr, &len);
-						if (recvbytecount == SOCKET_ERROR) {
-							int errid = WSAGetLastError();
-							//说明套接字被关闭,不是错误
-							if (errid == WSAEINTR) {
-								socketv6bindAddr = false;
-							}
-							else {
-								// 接受失败 并出现了错误
-								printf_s("recvfrom v6: %d\n", errid);
-							}
-						}
-						if (recvbytecount >= 0) {
-							if (_recvDataEvent != NULL) {
-								_recvDataEvent(recvbytecount, buffer, remoteAddr.sin6_addr, remoteAddr.sin6_port);
-							}
-						}
-					}
-				}
-
-			});
-			_recv_thread.detach();
 			
+
+			// 阻塞模式(默认)与非阻塞模式
+			if (!_blockingmode) {
+				u_long iMode = 1;
+				if (supportipv4) ::ioctlsocket(_sockfd4, FIONBIO, &iMode);
+				if (supportipv6) ::ioctlsocket(_sockfd6, FIONBIO, &iMode);
+			}
+
+			if (_allowbroadcast) {
+				if (supportipv4) setsockopt(_sockfd4, SOL_SOCKET, SO_BROADCAST, (const char*)&_allowbroadcast, sizeof(_allowbroadcast));
+				if (supportipv6) setsockopt(_sockfd6, SOL_SOCKET, SO_BROADCAST, (const char*)&_allowbroadcast, sizeof(_allowbroadcast));
+			}
+
+			if (supportipv4) {
+				makeIPv4RecvThread().detach();
+			}
+			if (supportipv6) {
+				makeIPv6RecvThread().detach();
+			}
 			return Error::noError;
 			//::sendto
 		}
@@ -1332,23 +1294,20 @@ namespace meet
 				if (!supportipv4) {
 					return Error::unFamily;				// 没有写支持这个地址协议
 				}
-				sendAddr4.sin_addr = ip.InAddr;
-				sendAddr4.sin_port = htons(port);
-				sendAddr4.sin_family = (ADDRESS_FAMILY)Family::IPV4;
-				ret = sendto(_sockfd4, data, len, 0, (ip.IPFamily == Family::IPV4) ? (SOCKADDR*)&sendAddr4 : (SOCKADDR*)&sendAddr6, ip.toSockaddrLen());
+				//ip.toSockaddr((sockaddr*)&sendAddr4, port);
+				ret = sendto(_sockfd4, data, len, 0, ip.toSockaddr((sockaddr*)&sendAddr4, port), ip.toSockaddrLen());
 			}
 			else {
 				if (!supportipv6) {
 					return Error::unFamily;				// 没有写支持这个地址协议
 				}
-				sendAddr6.sin6_addr = ip.InAddr6;
-				sendAddr6.sin6_port = htons(port);
-				sendAddr6.sin6_family = (ADDRESS_FAMILY)Family::IPV6;
-				ret = sendto(_sockfd6, data, len, 0, (ip.IPFamily == Family::IPV4) ? (SOCKADDR*)&sendAddr4 : (SOCKADDR*)&sendAddr6, ip.toSockaddrLen());
+				//ip.toSockaddr((sockaddr*)&sendAddr6, port);
+				ret = sendto(_sockfd6, data, len, 0, ip.toSockaddr((sockaddr*)&sendAddr6, port), ip.toSockaddrLen());
 			}
 			if (ret == SOCKET_ERROR) {
 				// 发送错误,应该关闭套接字
-				printf_s("sendto:%d\n", WSAGetLastError());
+				printf_s("sendto ret=-1:%d\n", WSAGetLastError());
+				return Error::sendFailed;
 			}
 			else
 			{
@@ -1364,6 +1323,110 @@ namespace meet
 		void matchmaker() {
 
 		}
+	private:
+		std::thread makeIPv4RecvThread() {
+			// 创建线程 从套接字接受数据
+			return std::thread([&]() {
+				char buffer[RecvBuffSize];
+				memset(buffer, '\0', RecvBuffSize);
+				while (true)
+				{
+					if (!_init) {
+						break;
+					}
+					if (!supportipv4 || !_sockfd4) {
+						break;
+					}
+					// 你不接收数据那我就没必要 recv了
+					if (_recvDataEvent == NULL) {
+						break;
+					}
+					// 处理IPV4
+					if (socketv4bindAddr) {
+						int recvbytecount;
+						sockaddr_in remoteAddr{};
+						int len = sizeof(remoteAddr);
+						recvbytecount = ::recvfrom(_sockfd4, buffer, RecvBuffSize, 0, (SOCKADDR*)&remoteAddr, &len);
+						if (recvbytecount == SOCKET_ERROR) {
+							int errid = WSAGetLastError();
+							//说明套接字被关闭,不是错误
+							if (errid == WSAEINTR) {
+								socketv4bindAddr = false;
+							}
+							else {
+								if (!_blockingmode) {
+									if (errid == WSAEWOULDBLOCK) {   // 非阻塞模式下 这个说明没有数据可接受,是正常的
+										//Sleep(1);
+										continue;
+									}
+								}
+								// 接受失败 并出现了错误
+								printf_s("recvfrom v4: %d\n", errid);
+							}
+						}
+						if (recvbytecount >= 0) {
+							_recvDataEvent(recvbytecount, buffer, remoteAddr.sin_addr, ntohs(remoteAddr.sin_port));
+						}
+						memset(buffer, '\0', RecvBuffSize);
+					}
+				}
+				});
+		}
+
+		std::thread makeIPv6RecvThread() {
+			// 创建线程 从套接字接受数据
+			return std::thread([&]() {
+				char buffer[RecvBuffSize];
+				memset(buffer, '\0', RecvBuffSize);
+				while (true)
+				{
+					if (!_init) {
+						break;
+					}
+					// 好复杂的逻辑, 在支持相关地址族的情况下,判断其中socket是否为0,也就是其是否关闭,来判断跳出循环
+					//if ((!supportipv4 || !_sockfd4) && (!supportipv6 || !_sockfd6)) {
+					//	break;
+					//}
+					if (!supportipv6 || !_sockfd6) {
+						break;
+					}
+					// 你不接收数据那我就没必要 recv了
+					if (_recvDataEvent == NULL) {
+						break;
+					}
+					// 处理IPV6
+					if (socketv6bindAddr && supportipv6) {
+						int recvbytecount;
+						sockaddr_in6 remoteAddr{};
+						int len = sizeof(remoteAddr);
+						recvbytecount = ::recvfrom(_sockfd6, buffer, RecvBuffSize, 0, (SOCKADDR*)&remoteAddr, &len);
+						if (recvbytecount == SOCKET_ERROR) {
+							int errid = WSAGetLastError();
+							//说明套接字被关闭,不是错误
+							if (errid == WSAEINTR) {
+								socketv6bindAddr = false;
+							}
+							else {
+								if (!_blockingmode) {
+									if (errid == WSAEWOULDBLOCK) {   // 非阻塞模式下 这个说明没有数据可接受,是正常的
+										//Sleep(1);
+										continue;
+									}
+								}
+								// 接受失败 并出现了错误
+								printf_s("recvfrom v6: %d\n", errid);//10054 广播远程主机强制关闭了socket
+							}
+						}
+						if (recvbytecount >= 0) {
+							_recvDataEvent(recvbytecount, buffer, remoteAddr.sin6_addr, ntohs(remoteAddr.sin6_port));
+						}
+						memset(buffer, '\0', RecvBuffSize);
+					}
+				}
+
+				});
+		}
+
 	public:
 		void OnRecvData(RecvDataEvent recvDataEvent) {
 			_recvDataEvent = recvDataEvent;
@@ -1379,6 +1442,8 @@ namespace meet
 		bool socketv6bindAddr = false;
 		bool supportipv4 = true;
 		bool supportipv6 = false;
+		bool _blockingmode = true;
+		bool _allowbroadcast = false;
 		static const int RecvBuffSize = 1024;
 
 

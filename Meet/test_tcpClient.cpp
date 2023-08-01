@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "../include/Meet.hpp"
 
 #include <iostream>
@@ -8,21 +8,21 @@
 bool ClientWriteFile = false;
 std::ofstream ClientWriteFileIO;
 
-// ¿ªÆôÒ»¸ö¿Í»§¶Ë
+// å¼€å¯ä¸€ä¸ªå®¢æˆ·ç«¯
 void startClient(meet::TCPClient& c) {
 
-    //¹Ø±Õ×èÈûÄ£Ê½
+    //å…³é—­é˜»å¡æ¨¡å¼
     //c.setBlockingMode(false);
 
-    //×¢²á¶Ï¿ªÁ¬½Ó »Øµ÷
+    //æ³¨å†Œæ–­å¼€è¿æ¥ å›è°ƒ
     c.onDisConnect([]() {
-        std::cout << "·şÎñ¶Ë¶Ï¿ªÁËÁ¬½Ó" << std::endl;
+        std::cout << "æœåŠ¡ç«¯æ–­å¼€äº†è¿æ¥" << std::endl;
         });
 
-    //×¢²á½ÓÊÕÏûÏ¢ »Øµ÷
+    //æ³¨å†Œæ¥æ”¶æ¶ˆæ¯ å›è°ƒ
     c.onRecvData([](ULONG64 len, const char* data) {
         if (!ClientWriteFile) {
-            std::cout << "\n[À´×Ô·şÎñ¶Ë " << len << "×Ö½Ú]:";
+            std::cout << "\n[æ¥è‡ªæœåŠ¡ç«¯ " << len << "å­—èŠ‚]:";
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 9);
             std::cout << std::string(data) << std::endl;
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
@@ -33,27 +33,27 @@ void startClient(meet::TCPClient& c) {
         }
         });
 
-    // ÊÖ¶¯ÉèÖÃÁ¬½Ó·şÎñ¶ËµÄµØÖ·¶Ë¿Ú
+    // æ‰‹åŠ¨è®¾ç½®è¿æ¥æœåŠ¡ç«¯çš„åœ°å€ç«¯å£
     std::string ip_input, fm_input;
     USHORT port;
     for (;;) {
-        std::cout << "Çë·Ö±ğÊäÈëÒªÁ¬½Ó·şÎñ¶ËµÄµØÖ·,¶Ë¿Ú,Ğ­Òé(4/6)(Ä¬ÈÏ127.0.0.1:3000)" << std::endl;
-        std::cout << "µØÖ·(ÇëÈ·±£¿ÉÒÔ½âÎö,·ñÔò»á±ÀÀ£):";
+        std::cout << "è¯·åˆ†åˆ«è¾“å…¥è¦è¿æ¥æœåŠ¡ç«¯çš„åœ°å€,ç«¯å£,åè®®(4/6)(é»˜è®¤127.0.0.1:3000)" << std::endl;
+        std::cout << "åœ°å€(è¯·ç¡®ä¿å¯ä»¥è§£æ,å¦åˆ™ä¼šå´©æºƒ):";
         std::string port_input;
         std::getline(std::cin, ip_input);
         if (ip_input == "" || ip_input == "0") {
-            //°´Ä¬ÈÏµÄÀ´Á¬½Ó
+            //æŒ‰é»˜è®¤çš„æ¥è¿æ¥
             ip_input = "127.0.0.1";
             port = 3000;
             break;
         }
-        std::cout << "¶Ë¿Ú:";
+        std::cout << "ç«¯å£:";
         std::getline(std::cin, port_input);
 
         auto p = atoi(port_input.c_str());
         if (p >= 65535 || p <= 0) {
             system("cls");
-            std::cout << "¶Ë¿Ú´íÁË" << std::endl;
+            std::cout << "ç«¯å£é”™äº†" << std::endl;
             continue;
         }
         port = p;
@@ -66,36 +66,38 @@ void startClient(meet::TCPClient& c) {
     meet::IP connIp = ip_input;
 
     if (!connIp.isValid()) {
-        std::cout << "µØÖ·½âÎö´íÎó: ÄãÊäÈëµÄÓòÃû¿ÉÄÜÎŞĞ§ " << ip_input << std::endl;
+        std::cout << "åœ°å€è§£æé”™è¯¯: ä½ è¾“å…¥çš„åŸŸåå¯èƒ½æ— æ•ˆ " << ip_input << std::endl;
         return;
     }
 
     std::cout << "IPAddress: " << connIp.toString() << std::endl;
 
-    // Á¬½Ó·şÎñ¶Ë ²¢¶ÔÁ¬½Ó½á¹û½øĞĞÅĞ¶Ï
+    c.setBlockingMode(false);
+
+    // è¿æ¥æœåŠ¡ç«¯ å¹¶å¯¹è¿æ¥ç»“æœè¿›è¡Œåˆ¤æ–­
     if ((connect_error = c.connect(connIp, port)) != meet::Error::noError) {
-        std::cout << "Á¬½Ó´íÎó:" << meet::getString(connect_error) << std::endl;
+        std::cout << "è¿æ¥é”™è¯¯:" << meet::getString(connect_error) << std::endl;
         std::cout << "debug Family: ";
         std::cout << ((connIp.IPFamily == meet::Family::IPV4) ? "IPV4" : "IPV6") << std::endl;
         return;
     }
 
-    //¸ù¾İÊäÈëÀ´Ö´ĞĞÏàÓ¦¹¦ÄÜ
+    //æ ¹æ®è¾“å…¥æ¥æ‰§è¡Œç›¸åº”åŠŸèƒ½
     for (;;) {
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
-        std::cout << "0 ---- ¶Ï¿ªÁ¬½Ó²¢ÍË³ö¿Í»§¶Ë" << std::endl;
-        std::cout << "1 ---- ·¢ËÍÎÄ±¾" << std::endl;
-        std::cout << "2 ---- ·¢ËÍÎÄ¼ş" << std::endl;
-        std::cout << "3 ---- ½ÓÊÕÎÄ¼ş" << std::endl;
-        std::cout << "4 ---- Í£Ö¹½ÓÊÕÎÄ¼ş" << std::endl;
+        std::cout << "0 ---- æ–­å¼€è¿æ¥å¹¶é€€å‡ºå®¢æˆ·ç«¯" << std::endl;
+        std::cout << "1 ---- å‘é€æ–‡æœ¬" << std::endl;
+        std::cout << "2 ---- å‘é€æ–‡ä»¶" << std::endl;
+        std::cout << "3 ---- æ¥æ”¶æ–‡ä»¶" << std::endl;
+        std::cout << "4 ---- åœæ­¢æ¥æ”¶æ–‡ä»¶" << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 3);
-        std::cout << "ÇëÊäÈëÒ»¸öÑ¡Ïî:";
+        std::cout << "è¯·è¾“å…¥ä¸€ä¸ªé€‰é¡¹:";
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
         std::string cinput;
         std::getline(std::cin, cinput);
 
         if (!c.Connected) {
-            std::cout << "Á¬½ÓÔçÒÑ¶Ï¿ª" << std::endl;
+            std::cout << "è¿æ¥æ—©å·²æ–­å¼€" << std::endl;
             return;
         }
 
@@ -105,16 +107,16 @@ void startClient(meet::TCPClient& c) {
             return;
         }
         else if (cinput == "1") {
-            std::cout << "ÇëÊäÈëÄãÒª·¢ËÍµÄÎÄ±¾:";
+            std::cout << "è¯·è¾“å…¥ä½ è¦å‘é€çš„æ–‡æœ¬:";
             std::string csendtext;
             std::getline(std::cin, csendtext);
 
             if (!c.Connected) {
-                std::cout << "Á¬½ÓÒÑ¾­¶Ï¿ª" << std::endl;
+                std::cout << "è¿æ¥å·²ç»æ–­å¼€" << std::endl;
                 return;
             }
 
-            //·¢ËÍÎÄ±¾
+            //å‘é€æ–‡æœ¬
             meet::Error send_error;
             if ((send_error = c.sendText(csendtext)) != meet::Error::noError) {
                 std::cout << meet::getString(send_error) << std::endl;
@@ -122,26 +124,26 @@ void startClient(meet::TCPClient& c) {
             }
         }
         else if (cinput == "2") {
-            std::cout << "ÇëÈ·±£¶Ô·½×¼±¸ºÃ½ÓÊÕÎÄ¼ş" << std::endl;
-            std::cout << "ÇëÊäÈëÎÄ¼şÃû:";
+            std::cout << "è¯·ç¡®ä¿å¯¹æ–¹å‡†å¤‡å¥½æ¥æ”¶æ–‡ä»¶" << std::endl;
+            std::cout << "è¯·è¾“å…¥æ–‡ä»¶å:";
             std::string csendfile;
             std::getline(std::cin, csendfile);
 
             if (!c.Connected) {
-                std::cout << "Á¬½ÓÒÑ¾­¶Ï¿ª" << std::endl;
+                std::cout << "è¿æ¥å·²ç»æ–­å¼€" << std::endl;
                 return;
             }
 
-            //·¢ËÍÎÄ¼ş ÒÔ¶ş½øÖÆ·½Ê½¶ÁÈ¡
+            //å‘é€æ–‡ä»¶ ä»¥äºŒè¿›åˆ¶æ–¹å¼è¯»å–
             std::ifstream sf(csendfile.c_str(), std::ios::binary | std::ios::in);
             if (!sf.good()) {
-                std::cout << "ÎÄ¼ş²»´æÔÚ,Çë×ĞÏ¸È·ÈÏ" << std::endl;
+                std::cout << "æ–‡ä»¶ä¸å­˜åœ¨,è¯·ä»”ç»†ç¡®è®¤" << std::endl;
                 continue;
             }
 
             while (true) {
                 if (sf.eof()) {
-                    std::cout << "ÎÄ¼ş·¢ËÍÍê³É¡£" << std::endl;
+                    std::cout << "æ–‡ä»¶å‘é€å®Œæˆã€‚" << std::endl;
                     break;
                 }
                 char* tempStr = new char[1024];
@@ -151,7 +153,7 @@ void startClient(meet::TCPClient& c) {
                 meet::Error sendFileErr = c.sendData(tempStr, readsize);
                 delete[] tempStr;
                 if (sendFileErr != meet::Error::noError) {
-                    std::cout << "·¢ËÍÎÄ¼ş·¢Éú´íÎó:" << meet::getString(sendFileErr) << std::endl;
+                    std::cout << "å‘é€æ–‡ä»¶å‘ç”Ÿé”™è¯¯:" << meet::getString(sendFileErr) << std::endl;
                     break;
                 }
             }
@@ -159,20 +161,20 @@ void startClient(meet::TCPClient& c) {
 
         }
         else if (cinput == "3") {
-            std::cout << "ÇëÊäÈë½«±£´æµÄÎÄ¼şÃû:";
+            std::cout << "è¯·è¾“å…¥å°†ä¿å­˜çš„æ–‡ä»¶å:";
             std::string csavefile;
             std::getline(std::cin, csavefile);
 
             if (!c.Connected) {
-                std::cout << "Á¬½ÓÒÑ¾­¶Ï¿ª" << std::endl;
+                std::cout << "è¿æ¥å·²ç»æ–­å¼€" << std::endl;
                 return;
             }
-            // ÉèÖÃÒ»¸ö±äÁ¿  Ê¹½ÓÊÕÏûÏ¢»Øµ÷ È·ÈÏÕâ¸ö±äÁ¿ºó½øĞĞÎÄ¼şµÄ±£´æ
+            // è®¾ç½®ä¸€ä¸ªå˜é‡  ä½¿æ¥æ”¶æ¶ˆæ¯å›è°ƒ ç¡®è®¤è¿™ä¸ªå˜é‡åè¿›è¡Œæ–‡ä»¶çš„ä¿å­˜
 
             ClientWriteFileIO.open(csavefile.c_str(), std::ios::binary);
             if (ClientWriteFileIO.is_open()) {
                 ClientWriteFile = true;
-                std::cout << "ÏÖÔÚ¿ªÊ¼½ÓÊÕÎÄ¼ş" << std::endl;
+                std::cout << "ç°åœ¨å¼€å§‹æ¥æ”¶æ–‡ä»¶" << std::endl;
             }
 
         }
@@ -180,7 +182,7 @@ void startClient(meet::TCPClient& c) {
             if (ClientWriteFile) {
                 ClientWriteFileIO.close();
                 ClientWriteFile = false;
-                std::cout << "ÎÄ¼şÒÑ±£´æ" << std::endl;
+                std::cout << "æ–‡ä»¶å·²ä¿å­˜" << std::endl;
             }
         }
 

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "../include/Meet.hpp"
 
 #include <iostream>
@@ -11,38 +11,38 @@ std::string ServerWriteFileIP;
 USHORT ServerWriteFilePort;
 std::ofstream ServerWriteFileIO;
 
-// ¿ªÆôÒ»¸öTCPµÄ·şÎñ
+// å¼€å¯ä¸€ä¸ªTCPçš„æœåŠ¡
 void startServer(meet::TCPServer& s) {
 
     meet::Family fa = meet::Family::IPV4;
     USHORT port = 3000;
     int maxconn = 5;
-    std::cout << "ÇëÊäÈëÄãÒª¼àÌıµØÖ·µÄĞ­Òé(4/6):";
+    std::cout << "è¯·è¾“å…¥ä½ è¦ç›‘å¬åœ°å€çš„åè®®(4/6):";
     std::string fa_input;
     std::getline(std::cin, fa_input);
     if (fa_input == "" || fa_input == "0") {
-        std::cout << "½«Ê¹ÓÃÄ¬ÈÏÏî(0.0.0.0 : 3000  maxconnect 5)" << std::endl;
+        std::cout << "å°†ä½¿ç”¨é»˜è®¤é¡¹(0.0.0.0 : 3000  maxconnect 5)" << std::endl;
     }
     else {
         if (fa_input == "6") {
             fa = meet::Family::IPV6;
         }
-        std::cout << "ÇëÊäÈëÄãÒª¼àÌı¶Ë¿Ú:";
+        std::cout << "è¯·è¾“å…¥ä½ è¦ç›‘å¬ç«¯å£:";
         std::string port_input;
         std::getline(std::cin, port_input);
         auto p = atoi(port_input.c_str());
         if (p >= 65535 || p <= 0) {
-            std::cout << "ÊäÈëµÄ¶Ë¿ÚÓĞÎÊÌâ" << std::endl;
+            std::cout << "è¾“å…¥çš„ç«¯å£æœ‰é—®é¢˜" << std::endl;
             return;
         }
         port = p;
 
-        std::cout << "ÇëÊäÈë×î´óÔÊĞíÁ¬½ÓµÄ¿Í»§¶ËÊıÁ¿:";
+        std::cout << "è¯·è¾“å…¥æœ€å¤§å…è®¸è¿æ¥çš„å®¢æˆ·ç«¯æ•°é‡:";
         std::string count_input;
         std::getline(std::cin, count_input);
         auto count = atoi(count_input.c_str());
         if (count <= 0) {
-            std::cout << "ÄãÂÒÊäÊ²Ã´°¡,ÎÒÌæÄãÑ¡°É,¾Í¡­¡­10¸ö°É" << std::endl;
+            std::cout << "ä½ ä¹±è¾“ä»€ä¹ˆå•Š,æˆ‘æ›¿ä½ é€‰å§,å°±â€¦â€¦10ä¸ªå§" << std::endl;
             maxconn = 10;
         }
         else {
@@ -51,27 +51,27 @@ void startServer(meet::TCPServer& s) {
 
     }
 
-    // ÉèÖÃÎª×èÈûÄ£Ê½
+    // è®¾ç½®ä¸ºé˜»å¡æ¨¡å¼
     s.setBlockingMode(true);
 
-    // ¼àÌı¿Í»§¶Ë¶Ï¿ªÁ¬½ÓµÄÏûÏ¢
+    // ç›‘å¬å®¢æˆ·ç«¯æ–­å¼€è¿æ¥çš„æ¶ˆæ¯
     s.onClientDisConnect([](meet::TCPServer::MeetClient meetClient) {
-        printf("\n[%s -:- %d][Á¬½Ó] ¶Ï¿ªÁ¬½Ó\n", meetClient.addr.toString().c_str(), meetClient.port);
+        printf("\n[%s -:- %d][è¿æ¥] æ–­å¼€è¿æ¥\n", meetClient.addr.toString().c_str(), meetClient.port);
         });
 
-    // ¼àÌı¿Í»§¶ËÁ¬½ÓµÄÏûÏ¢
+    // ç›‘å¬å®¢æˆ·ç«¯è¿æ¥çš„æ¶ˆæ¯
     s.onNewClientConnect([](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/) {
-        printf("\n[%s -:- %d][Á¬½Ó] Á¬½Ó³É¹¦\n", meetClient.addr.toString().c_str(), meetClient.port);
+        printf("\n[%s -:- %d][è¿æ¥] è¿æ¥æˆåŠŸ\n", meetClient.addr.toString().c_str(), meetClient.port);
         });
 
-    // µ±ÓĞÊı¾İµ½´ïÊ±¼àÌıÏûÏ¢
+    // å½“æœ‰æ•°æ®åˆ°è¾¾æ—¶ç›‘å¬æ¶ˆæ¯
     s.onRecvData([](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/, ULONG64 len, const char* data) {
         if (ServerWriteFile && ServerWriteFileIP == meetClient.addr.toString() && ServerWriteFilePort == meetClient.port) {
             ServerWriteFileIO.write(data, len);
             ServerWriteFileIO.flush();
         }
         else {
-            printf("\n[%s -:- %d][Êı¾İ][%I64d×Ö½Ú]:", meetClient.addr.toString().c_str(), meetClient.port, len);
+            printf("\n[%s -:- %d][æ•°æ®][%I64då­—èŠ‚]:", meetClient.addr.toString().c_str(), meetClient.port, len);
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 9);
             std::cout << std::string(data) << std::endl;
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
@@ -79,27 +79,27 @@ void startServer(meet::TCPServer& s) {
 
         });
 
-    // ¼àÌıµØÖ· ¶Ô¼àÌıv4µØÖ·ºÍ v6µØÖ·×ö³öÇø·Ö
+    // ç›‘å¬åœ°å€ å¯¹ç›‘å¬v4åœ°å€å’Œ v6åœ°å€åšå‡ºåŒºåˆ†
     if (fa == meet::Family::IPV6) {
         s.setListenAddress("::");
     }
 
-    // ÉèÖÃ·şÎñ¶ËµÄ¿Í»§¶ËÁ¬½Ó¶ÓÁĞµÄ×î´óÖµ
+    // è®¾ç½®æœåŠ¡ç«¯çš„å®¢æˆ·ç«¯è¿æ¥é˜Ÿåˆ—çš„æœ€å¤§å€¼
     s.setMaxConnectCount(maxconn);
 
-    // ¿ªÊ¼¼àÌı
+    // å¼€å§‹ç›‘å¬
     meet::Error listen_err = s.Listen(port);
     if (listen_err != meet::Error::noError) {
-        std::cout << "¼àÌı´íÎó:" << meet::getString(listen_err) << std::endl;
+        std::cout << "ç›‘å¬é”™è¯¯:" << meet::getString(listen_err) << std::endl;
         return;
     }
 
     for (;;) {
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
-        std::cout << "0 ---- ¶Ï¿ªËùÓĞÁ¬½Ó²¢ÍË³ö·şÎñ¶Ë" << std::endl;
-        std::cout << "1 ---- Ñ¡ÔñÒ»¸ö¿Í»§¶Ë,²¢½øĞĞ²Ù×÷" << std::endl;
+        std::cout << "0 ---- æ–­å¼€æ‰€æœ‰è¿æ¥å¹¶é€€å‡ºæœåŠ¡ç«¯" << std::endl;
+        std::cout << "1 ---- é€‰æ‹©ä¸€ä¸ªå®¢æˆ·ç«¯,å¹¶è¿›è¡Œæ“ä½œ" << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 3);
-        std::cout << "ÇëÊäÈëÒ»¸öÑ¡Ïî:";
+        std::cout << "è¯·è¾“å…¥ä¸€ä¸ªé€‰é¡¹:";
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
         std::string sinput;
         std::getline(std::cin, sinput);
@@ -114,7 +114,7 @@ void startServer(meet::TCPServer& s) {
                     discount++;
                 }
             }
-            std::cout << "¹²³É¹¦¶Ï¿ªÁË " << discount << "/" << clientcount << " ¸ö¿Í»§¶ËµÄÁ¬½Ó" << std::endl;
+            std::cout << "å…±æˆåŠŸæ–­å¼€äº† " << discount << "/" << clientcount << " ä¸ªå®¢æˆ·ç«¯çš„è¿æ¥" << std::endl;
             std::cout << "debug clientList size: " << clientList.size() << std::endl;
             s.close();
             break;
@@ -124,7 +124,7 @@ void startServer(meet::TCPServer& s) {
                 int a = 0;
                 auto& clientList = s.GetALLClient();
                 if (clientList.size() == 0) {
-                    std::cout << "µ±Ç°Ã»ÓĞ¿Í»§¶ËÁ¬½Ó" << std::endl;
+                    std::cout << "å½“å‰æ²¡æœ‰å®¢æˆ·ç«¯è¿æ¥" << std::endl;
                     break;
                 }
 
@@ -132,8 +132,8 @@ void startServer(meet::TCPServer& s) {
                 for (int i = 0; i < clientList.size(); i++) {
                     std::cout << i << " ========== [" << clientList.at(i).addr.toString() << ":" << clientList.at(i).port << "]" << std::endl;
                 }
-                std::cout << clientList.size() << " ========== [·µ»ØÉÏÒ»Ò³] " << std::endl;
-                std::cout << "ÇëÊäÈëÒ»¸öĞòºÅÑ¡ÔñÒ»¸ö¿Í»§¶Ë:";
+                std::cout << clientList.size() << " ========== [è¿”å›ä¸Šä¸€é¡µ] " << std::endl;
+                std::cout << "è¯·è¾“å…¥ä¸€ä¸ªåºå·é€‰æ‹©ä¸€ä¸ªå®¢æˆ·ç«¯:";
                 std::string sinput_client;
                 std::getline(std::cin, sinput_client);
 
@@ -146,33 +146,33 @@ void startServer(meet::TCPServer& s) {
                     break;
                 }
                 if (x >= 0 && x < clientList.size()) {
-                    // ¿ØÖÆÌ¨ÊäÈëÑ¡ÔñÁËÒ»¸ö¿Í»§¶Ë
+                    // æ§åˆ¶å°è¾“å…¥é€‰æ‹©äº†ä¸€ä¸ªå®¢æˆ·ç«¯
                     meet::TCPServer::MeetClient client = clientList.at(x);
-                    // ¶ÔÑ¡ÔñµÄ¿Í»§¶Ë½øĞĞ²Ù×÷
+                    // å¯¹é€‰æ‹©çš„å®¢æˆ·ç«¯è¿›è¡Œæ“ä½œ
                     for (;;) {
                         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
-                        std::cout << "µ±Ç°Ñ¡ÔñµÄ¿Í»§¶ËÊÇ:[" << client.addr.toString() << ":" << client.port << "]" << std::endl;
-                        std::cout << "0 ---- ¶Ï¿ªÕâ¸ö¿Í»§¶Ë,²¢·µ»ØÉÏÒ»Ò³" << std::endl;
-                        std::cout << "1 ---- ·µ»ØÉÏÒ»Ò³" << std::endl;
-                        std::cout << "2 ---- ·¢ËÍÏûÏ¢" << std::endl;
-                        std::cout << "3 ---- ·¢ËÍÎÄ¼ş" << std::endl;
-                        std::cout << "4 ---- ½ÓÊÕÎÄ¼ş" << std::endl;
-                        std::cout << "5 ---- Í£Ö¹½ÓÊÕÎÄ¼ş" << std::endl;
-                        std::cout << "6/cls ---- ÇåÆÁ" << std::endl;
+                        std::cout << "å½“å‰é€‰æ‹©çš„å®¢æˆ·ç«¯æ˜¯:[" << client.addr.toString() << ":" << client.port << "]" << std::endl;
+                        std::cout << "0 ---- æ–­å¼€è¿™ä¸ªå®¢æˆ·ç«¯,å¹¶è¿”å›ä¸Šä¸€é¡µ" << std::endl;
+                        std::cout << "1 ---- è¿”å›ä¸Šä¸€é¡µ" << std::endl;
+                        std::cout << "2 ---- å‘é€æ¶ˆæ¯" << std::endl;
+                        std::cout << "3 ---- å‘é€æ–‡ä»¶" << std::endl;
+                        std::cout << "4 ---- æ¥æ”¶æ–‡ä»¶" << std::endl;
+                        std::cout << "5 ---- åœæ­¢æ¥æ”¶æ–‡ä»¶" << std::endl;
+                        std::cout << "6/cls ---- æ¸…å±" << std::endl;
                         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 3);
-                        std::cout << "ÇëÊäÈëÒ»¸öÑ¡Ïî:";
+                        std::cout << "è¯·è¾“å…¥ä¸€ä¸ªé€‰é¡¹:";
                         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
                         std::string sinput_setup;
                         std::getline(std::cin, sinput_setup);
 
                         if (x >= clientList.size() || clientList.at(x).clientSocket != client.clientSocket) {
-                            std::cout << "¸Ã¿Í»§¶ËµÄÁ¬½ÓÔçÒÑ¶Ï¿ª" << std::endl;
+                            std::cout << "è¯¥å®¢æˆ·ç«¯çš„è¿æ¥æ—©å·²æ–­å¼€" << std::endl;
                             break;
                         }
                         if (sinput_setup == "0") {
                             meet::Error err = s.disClientConnect(client.addr, client.port);
                             if (err != meet::Error::noError) {
-                                std::cout << "¿Í»§¶Ë¶Ï¿ªÊ§°Ü:" << meet::getString(err) << std::endl;
+                                std::cout << "å®¢æˆ·ç«¯æ–­å¼€å¤±è´¥:" << meet::getString(err) << std::endl;
                             }
                             //s.Close();
                             break;
@@ -181,32 +181,32 @@ void startServer(meet::TCPServer& s) {
                             break;
                         }
                         else if (sinput_setup == "2") {
-                            std::cout << "ÇëÊäÈëÄãÒª·¢ËÍµÄÎÄ±¾:";
+                            std::cout << "è¯·è¾“å…¥ä½ è¦å‘é€çš„æ–‡æœ¬:";
                             std::string ssendtext;
                             std::getline(std::cin, ssendtext);
 
                             meet::Error err;
                             if ((err = s.sendText(client.clientSocket, ssendtext)) != meet::Error::noError) {
-                                std::cout << "·¢ËÍÏûÏ¢³öÏÖ´íÎó" << meet::getString(err) << std::endl;
+                                std::cout << "å‘é€æ¶ˆæ¯å‡ºç°é”™è¯¯" << meet::getString(err) << std::endl;
                             }
                         }
                         else if (sinput_setup == "3") {
-                            std::cout << "ÇëÈ·±£¶Ô·½×¼±¸ºÃ½ÓÊÕÎÄ¼ş" << std::endl;
-                            std::cout << "ÇëÊäÈëÎÄ¼şÃû:";
+                            std::cout << "è¯·ç¡®ä¿å¯¹æ–¹å‡†å¤‡å¥½æ¥æ”¶æ–‡ä»¶" << std::endl;
+                            std::cout << "è¯·è¾“å…¥æ–‡ä»¶å:";
                             std::string ssendfile;
                             std::getline(std::cin, ssendfile);
 
-                            //·¢ËÍÎÄ¼ş ÒÔ¶ş½øÖÆ·½Ê½¶ÁÈ¡
+                            //å‘é€æ–‡ä»¶ ä»¥äºŒè¿›åˆ¶æ–¹å¼è¯»å–
                             std::ifstream sf(ssendfile.c_str(), std::ios::binary | std::ios::in);
                             if (!sf.good()) {
-                                std::cout << "ÎÄ¼ş²»´æÔÚ,Çë×ĞÏ¸È·ÈÏ" << std::endl;
+                                std::cout << "æ–‡ä»¶ä¸å­˜åœ¨,è¯·ä»”ç»†ç¡®è®¤" << std::endl;
                                 continue;
                             }
 
                             while (true) {
 
                                 if (sf.eof()) {
-                                    std::cout << "ÎÄ¼ş·¢ËÍÍê³É¡£" << std::endl;
+                                    std::cout << "æ–‡ä»¶å‘é€å®Œæˆã€‚" << std::endl;
                                     break;
                                 }
                                 char* tempStr = new char[1024];
@@ -215,7 +215,7 @@ void startServer(meet::TCPServer& s) {
 
                                 meet::Error sendFileErr = s.sendData(client.clientSocket, tempStr, readsize);
                                 if (sendFileErr != meet::Error::noError) {
-                                    std::cout << "·¢ËÍÎÄ¼ş·¢Éú´íÎó:" << meet::getString(sendFileErr) << std::endl;
+                                    std::cout << "å‘é€æ–‡ä»¶å‘ç”Ÿé”™è¯¯:" << meet::getString(sendFileErr) << std::endl;
                                     break;
                                 }
                             }
@@ -223,7 +223,7 @@ void startServer(meet::TCPServer& s) {
                         }
                         else if (sinput_setup == "4") {
 
-                            std::cout << "ÇëÊäÈë½«±£´æµÄÎÄ¼şÃû:";
+                            std::cout << "è¯·è¾“å…¥å°†ä¿å­˜çš„æ–‡ä»¶å:";
                             std::string ssavefile;
                             std::getline(std::cin, ssavefile);
 
@@ -233,14 +233,14 @@ void startServer(meet::TCPServer& s) {
                                 ServerWriteFile = true;
                                 ServerWriteFileIP = client.addr.toString();
                                 ServerWriteFilePort = client.port;
-                                std::cout << "¿ªÊ¼½ÓÊÕÎÄ¼ş" << std::endl;
+                                std::cout << "å¼€å§‹æ¥æ”¶æ–‡ä»¶" << std::endl;
                             }
                         }
                         else if (sinput_setup == "5") {
                             if (ServerWriteFile) {
                                 ServerWriteFileIO.close();
                                 ServerWriteFile = false;
-                                std::cout << "ÎÄ¼şÒÑ¾­±£´æ" << std::endl;
+                                std::cout << "æ–‡ä»¶å·²ç»ä¿å­˜" << std::endl;
                             }
                         }
                         else if (sinput_setup == "6" || sinput_setup == "cls") {
