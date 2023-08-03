@@ -340,7 +340,6 @@ namespace meet
 			for (addrinfo* chires = res; chires != NULL; chires = chires->ai_next) {
 				ips.push_back(IP(chires->ai_addr));
 			}
-			
 			freeaddrinfo(res);
 			return ips;
 		}
@@ -1256,8 +1255,6 @@ namespace meet
 
 			_init = true;
 
-			
-
 			// 阻塞模式(默认)与非阻塞模式
 			if (!_blockingmode) {
 				u_long iMode = 1;
@@ -1271,13 +1268,12 @@ namespace meet
 			}
 
 			if (supportipv4) {
-				makeIPv4RecvThread().detach();
+				_makeIPv4RecvThread().detach();
 			}
 			if (supportipv6) {
-				makeIPv6RecvThread().detach();
+				_makeIPv6RecvThread().detach();
 			}
 			return Error::noError;
-			//::sendto
 		}
 
 		Error sendData(IP ip, u_short port, char* data, int len) {
@@ -1324,7 +1320,75 @@ namespace meet
 
 		}
 	private:
-		std::thread makeIPv4RecvThread() {
+		/**
+		 * @brief 处理接收消息返回-1的问题
+		 * @param wsaLastError 
+		 * @param socketbindAddr 类全局的判定开关,判断该socket是否传入了ip
+		 * @return false 跳出, true 接着执行 
+		*/
+		bool _recvFromError(int wsaLastError, bool& socketbindAddr) {
+			//说明套接字被关闭,不是错误
+			if (wsaLastError == WSAEINTR) {
+				socketbindAddr = false;
+				return false;
+			}
+			
+			if (!_blockingmode) {
+				if (wsaLastError == WSAEWOULDBLOCK) {   // 非阻塞模式下 这个说明没有数据可接受,是正常的
+					//Sleep(1);
+					return false;						// 这里跳出
+				}
+			}
+			// 接收失败 并出现了错误
+			printf_s("recvfrom v4 or v6: %d\n", wsaLastError);//10054 广播远程主机强制关闭了socket
+			return true;
+		}
+
+		/**
+		 * @brief 处理IPv4的数据接收
+		 * @param buf 接受缓冲区
+		 * @param buffsize 缓冲区大小
+		 * @return false 跳出, true 接着执行 
+		*/
+		bool _handleIPv4AcceptData(char buf[], int buffsize) {
+			sockaddr_in remoteAddr{};
+			int len = sizeof(remoteAddr);
+			int recvbytecount = ::recvfrom(_sockfd4, buf, buffsize, 0, (SOCKADDR*)&remoteAddr, &len);
+			if (recvbytecount == SOCKET_ERROR) {
+				if (!_recvFromError(WSAGetLastError(), socketv4bindAddr)) {
+					return false;
+				}
+			}
+			if (recvbytecount >= 0) {
+				_recvDataEvent(recvbytecount, buf, remoteAddr.sin_addr, ntohs(remoteAddr.sin_port));
+				memset(buf, '\0', buffsize);
+			}
+			return true;
+		}
+
+		/**
+		 * @brief 处理IPv6的数据接收
+		 * @param buf 接收缓冲区
+		 * @param buffsize 缓冲区大小
+		 * @return false 跳出, true 接着执行 
+		*/
+		bool _handleIPv6AcceptData(char buf[], int buffsize) {
+			sockaddr_in6 remoteAddr{};
+			int len = sizeof(remoteAddr);
+			int recvbytecount = ::recvfrom(_sockfd6, buf, buffsize, 0, (SOCKADDR*)&remoteAddr, &len);
+			if (recvbytecount == SOCKET_ERROR) {
+				if (!_recvFromError(WSAGetLastError(), socketv6bindAddr)) {
+					return false;
+				}
+			}
+			if (recvbytecount >= 0) {
+				_recvDataEvent(recvbytecount, buf, remoteAddr.sin6_addr, ntohs(remoteAddr.sin6_port));
+				memset(buf, '\0', buffsize);
+			}
+			return true;
+		}
+
+		std::thread _makeIPv4RecvThread() {
 			// 创建线程 从套接字接受数据
 			return std::thread([&]() {
 				char buffer[RecvBuffSize];
@@ -1343,37 +1407,15 @@ namespace meet
 					}
 					// 处理IPV4
 					if (socketv4bindAddr) {
-						int recvbytecount;
-						sockaddr_in remoteAddr{};
-						int len = sizeof(remoteAddr);
-						recvbytecount = ::recvfrom(_sockfd4, buffer, RecvBuffSize, 0, (SOCKADDR*)&remoteAddr, &len);
-						if (recvbytecount == SOCKET_ERROR) {
-							int errid = WSAGetLastError();
-							//说明套接字被关闭,不是错误
-							if (errid == WSAEINTR) {
-								socketv4bindAddr = false;
-							}
-							else {
-								if (!_blockingmode) {
-									if (errid == WSAEWOULDBLOCK) {   // 非阻塞模式下 这个说明没有数据可接受,是正常的
-										//Sleep(1);
-										continue;
-									}
-								}
-								// 接受失败 并出现了错误
-								printf_s("recvfrom v4: %d\n", errid);
-							}
+						if (!_handleIPv4AcceptData(buffer, RecvBuffSize)) {
+							continue;
 						}
-						if (recvbytecount >= 0) {
-							_recvDataEvent(recvbytecount, buffer, remoteAddr.sin_addr, ntohs(remoteAddr.sin_port));
-						}
-						memset(buffer, '\0', RecvBuffSize);
 					}
 				}
 				});
 		}
 
-		std::thread makeIPv6RecvThread() {
+		std::thread _makeIPv6RecvThread() {
 			// 创建线程 从套接字接受数据
 			return std::thread([&]() {
 				char buffer[RecvBuffSize];
@@ -1383,44 +1425,18 @@ namespace meet
 					if (!_init) {
 						break;
 					}
-					// 好复杂的逻辑, 在支持相关地址族的情况下,判断其中socket是否为0,也就是其是否关闭,来判断跳出循环
-					//if ((!supportipv4 || !_sockfd4) && (!supportipv6 || !_sockfd6)) {
-					//	break;
-					//}
 					if (!supportipv6 || !_sockfd6) {
 						break;
 					}
-					// 你不接收数据那我就没必要 recv了
+					// 你不接收数据那我就没必要 recv了, 后面也没有机会设置 recv方法了
 					if (_recvDataEvent == NULL) {
 						break;
 					}
 					// 处理IPV6
-					if (socketv6bindAddr && supportipv6) {
-						int recvbytecount;
-						sockaddr_in6 remoteAddr{};
-						int len = sizeof(remoteAddr);
-						recvbytecount = ::recvfrom(_sockfd6, buffer, RecvBuffSize, 0, (SOCKADDR*)&remoteAddr, &len);
-						if (recvbytecount == SOCKET_ERROR) {
-							int errid = WSAGetLastError();
-							//说明套接字被关闭,不是错误
-							if (errid == WSAEINTR) {
-								socketv6bindAddr = false;
-							}
-							else {
-								if (!_blockingmode) {
-									if (errid == WSAEWOULDBLOCK) {   // 非阻塞模式下 这个说明没有数据可接受,是正常的
-										//Sleep(1);
-										continue;
-									}
-								}
-								// 接受失败 并出现了错误
-								printf_s("recvfrom v6: %d\n", errid);//10054 广播远程主机强制关闭了socket
-							}
+					if (socketv6bindAddr) {
+						if (!_handleIPv6AcceptData(buffer, RecvBuffSize)) {
+							continue;
 						}
-						if (recvbytecount >= 0) {
-							_recvDataEvent(recvbytecount, buffer, remoteAddr.sin6_addr, ntohs(remoteAddr.sin6_port));
-						}
-						memset(buffer, '\0', RecvBuffSize);
 					}
 				}
 
