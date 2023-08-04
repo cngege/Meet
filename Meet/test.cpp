@@ -67,7 +67,7 @@ int main() {
         }
         // UDP Client
         else if (userinput == "4") {
-            system("title UDP Client / 客户端");
+            system("title UDP Client / 客户端");           // 已证实 A通过出口Socket A' 连接B， C就可以通过发送数据到A' 而连接A
             startUDPClient();
         }
         else if (userinput == "5" || userinput == "cls") {

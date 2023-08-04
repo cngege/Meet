@@ -249,6 +249,9 @@ namespace meet
 			_valid = false;
 		}
 	public:
+		void Clear() {
+			_valid = false;
+		}
 	public:
 	public:
 
@@ -354,6 +357,7 @@ namespace meet
 		//	this->_valid = ip._valid;
 		//	return *this;
 		//}
+
 
 		bool operator==(const IP& ip) const {
 			if (this->_valid != ip._valid || this->IPFamily != ip.IPFamily) {
@@ -1276,7 +1280,7 @@ namespace meet
 			return Error::noError;
 		}
 
-		Error sendData(IP ip, u_short port, char* data, int len) {
+		Error sendData(IP ip, u_short port,const char* data, int len) {
 			if (!_init) {
 				return Error::uninitialized;
 			}
