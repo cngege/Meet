@@ -1719,8 +1719,6 @@ namespace meet
 		int recvBuffSize = 102400;
 
 		SOCKET _sockfd{};
-		//SOCKET _sockfd4{};
-		//SOCKET _sockfd6{};
 	};
 
 }//namespace meet
