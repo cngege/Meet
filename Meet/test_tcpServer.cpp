@@ -90,6 +90,9 @@ void startServer(meet::TCPServer& s) {
     // 开始监听
     meet::Error listen_err = s.Listen(port);
     if (listen_err != meet::Error::noError) {
+        if (WSAGetLastError() == WSAEADDRINUSE) {
+            std::cout << "监听地址已被其他进程绑定 " << std::endl;
+        }
         std::cout << "监听错误:" << meet::getString(listen_err) << std::endl;
         return;
     }

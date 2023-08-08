@@ -233,12 +233,24 @@ namespace meet
 
 		// 需要研究下如果是ipv6那么传进来的数据会不会丢失
 		IP(sockaddr* addr) {
-			if (addr->sa_family == (int)Family::IPV4) {
+			if (addr->sa_family == (ADDRESS_FAMILY)Family::IPV4) {
 				IPFamily = Family::IPV4;
 				InAddr = ((sockaddr_in*)addr)->sin_addr;
 			}
 			else 
 			{
+				IPFamily = Family::IPV6;
+				InAddr6 = ((sockaddr_in6*)addr)->sin6_addr;
+			}
+			_valid = true;
+		}
+
+		IP(sockaddr_storage* addr) {
+			if (addr->ss_family == (ADDRESS_FAMILY)Family::IPV4) {
+				IPFamily = Family::IPV4;
+				InAddr = ((sockaddr_in*)addr)->sin_addr;
+			}
+			else {
 				IPFamily = Family::IPV6;
 				InAddr6 = ((sockaddr_in6*)addr)->sin6_addr;
 			}
@@ -281,14 +293,15 @@ namespace meet
 		*/
 		sockaddr* toSockaddr(sockaddr* saddr, u_short port = 0) {
 			if (_valid) {
-				if (this->IPFamily == Family::IPV4) {
+				saddr->sa_family = (ADDRESS_FAMILY)Family::IPV4;
+				if (isIPv4()) {
 					((sockaddr_in*)saddr)->sin_family = (ADDRESS_FAMILY)Family::IPV4;
 					((sockaddr_in*)saddr)->sin_addr = InAddr;
 					if (port != 0) {
 						((sockaddr_in*)saddr)->sin_port = htons(port);
 					}
 				}
-				else if(this->IPFamily == Family::IPV6) {
+				else if(isIPv6()) {
 					((sockaddr_in6*)saddr)->sin6_family = (ADDRESS_FAMILY)Family::IPV6;
 					((sockaddr_in6*)saddr)->sin6_addr = InAddr6;
 					if (port != 0) {
@@ -298,6 +311,28 @@ namespace meet
 			}
 			return saddr;
 		}
+
+		sockaddr_storage* toSockaddr(sockaddr_storage* saddr, u_short port = 0) {
+			if (_valid) {
+				saddr->ss_family = (ADDRESS_FAMILY)Family::IPV4;
+				if (isIPv4()) {
+					((sockaddr_in*)saddr)->sin_family = (ADDRESS_FAMILY)Family::IPV4;
+					((sockaddr_in*)saddr)->sin_addr = InAddr;
+					if (port != 0) {
+						((sockaddr_in*)saddr)->sin_port = htons(port);
+					}
+				}
+				else if (isIPv6()) {
+					((sockaddr_in6*)saddr)->sin6_family = (ADDRESS_FAMILY)Family::IPV6;
+					((sockaddr_in6*)saddr)->sin6_addr = InAddr6;
+					if (port != 0) {
+						((sockaddr_in6*)saddr)->sin6_port = htons(port);
+					}
+				}
+			}
+			return saddr;
+		}
+
 
 		int toSockaddrLen() {
 			return (this->IPFamily == Family::IPV4) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
@@ -309,6 +344,14 @@ namespace meet
 		*/
 		bool isValid() {
 			return _valid;
+		}
+
+		bool isIPv4() {
+			return this->IPFamily == Family::IPV4;
+		}
+
+		bool isIPv6() {
+			return this->IPFamily == Family::IPV6;
 		}
 
 	public:
@@ -487,7 +530,9 @@ namespace meet
 			//}
 			
 			// 这里没有判断而直接使用 sockaddr_in6 是因为 sockaddr能装得下v4 但装不下v6 故直接使用v6(虽然在使用v4连接的时候会浪费一点内存)
-			sockaddr_in6 saddr{};
+			//sockaddr_in6 saddr{};
+			// 这里使用 sockaddr_storage 而不是使用 sockaddr ，因为前者的结构大小足够容纳IPv4 和 IPv6
+			sockaddr_storage saddr{};
 			if (::connect(_sockfd, ip.toSockaddr((sockaddr*)&saddr, port), ip.toSockaddrLen()) == INVALID_SOCKET) {
 				closesocket(_sockfd);
 				return Error::connectFailed;
@@ -643,7 +688,7 @@ namespace meet
 
 				while (c->Connected) {
 					int recvbytecount;
-					if ((recvbytecount = recv(c->_sockfd, buffer, RecvBuffSize, 0)) <= 0) {
+					if ((recvbytecount = recv(c->_sockfd, buffer, RecvBuffSize - 1, 0)) <= 0) {
 						//Return 0 Network Outage
 						if (recvbytecount == 0) {
 							c->Connected = false;
@@ -667,9 +712,9 @@ namespace meet
 					//接收数据 触发回调
 					else {
 						if (c->_recvDataEvent != NULL) {
+							buffer[recvbytecount] = '\0';
 							c->_recvDataEvent(recvbytecount, buffer);
 						}
-						memset(buffer, '\0', RecvBuffSize);
 					}
 				}//while (c->connected)
 			}//if(!c->connected)
@@ -681,8 +726,8 @@ namespace meet
 
 	private:
 		SOCKET _sockfd = NULL;
-		struct sockaddr_in _sock4 = {};
-		struct sockaddr_in6 _sock6 = {};
+		//struct sockaddr_in _sock4 = {};
+		//struct sockaddr_in6 _sock6 = {};
 
 		bool _blockingmode = true;
 		Family _family = Family::IPV4;
@@ -792,8 +837,21 @@ namespace meet
 				return Error::initializationWinsockFailed;
 			}
 
-			// 分IP协议 对本地地址进行绑定
 			{
+				memset(&_sock, 0, sizeof(struct sockaddr_storage));
+				_listenAddr.toSockaddr(&_sock, _listenPort);
+				_socket = socket((ADDRESS_FAMILY)_listenAddr.IPFamily, SOCK_STREAM, IPPROTO_TCP);
+				if (_socket == INVALID_SOCKET) {
+					return Error::socketError;
+				}
+				if (::bind(_socket, (sockaddr*)&_sock, _listenAddr.toSockaddrLen()) == SOCKET_ERROR) {
+					return Error::bindError;
+				}
+			}
+
+			// 分IP协议 对本地地址进行绑定  // (由上面 sockaddr_storage 代替)
+			{
+				/*
 				if (_listenAddr.IPFamily == Family::IPV4) {
 					memset(&_sock4, 0, sizeof(struct sockaddr_in));
 					_sock4.sin_family = (ADDRESS_FAMILY)_listenAddr.IPFamily;
@@ -820,6 +878,7 @@ namespace meet
 						return Error::bindError;
 					}
 				}
+				*/
 			}
 
 			// 系统API建立监听,这里第二个参数表示在建立握手时队列最多可等待的连接数
@@ -842,6 +901,16 @@ namespace meet
 					IP clientAddress;
 					u_short clientPort = 0;
 
+					struct sockaddr_storage remoteAddr = {};
+					int nAddrlen = sizeof(remoteAddr);
+					c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
+					if (c_socket == INVALID_SOCKET) {   //无效的套接字
+						continue;
+					}
+					clientAddress = IP(&remoteAddr);
+					clientPort = ntohs((remoteAddr.ss_family == (ADDRESS_FAMILY)Family::IPV4)? ((sockaddr_in*)&remoteAddr)->sin_port : ((sockaddr_in6*)&remoteAddr)->sin6_port);
+
+					/*
 					// 这个判断不能简写 struct sockaddr remoteAddr = {}; 因为sockaddr长度不够会导致ipv6连接进来但无法获取到
 					if (_listenAddr.IPFamily == Family::IPV4) {
 						struct sockaddr_in remoteAddr = {};
@@ -863,6 +932,7 @@ namespace meet
 						clientAddress = IP(remoteAddr.sin6_addr);
 						clientPort = ntohs(remoteAddr.sin6_port);
 					}
+					*/
 
 					if (clientList.size() < _maxCount) {
 
@@ -871,11 +941,11 @@ namespace meet
 
 						//创建线程 监听客户端传来的消息
 						auto _recv_thread = std::thread([this, newClient]() {
-							char buffer[1024];
+							char buffer[RecvBuffSize];
 							memset(buffer, '\0', sizeof(buffer));
 							while (_serverRunning) {
 								int recvbytecount;
-								if ((recvbytecount = ::recv(newClient.clientSocket, buffer, sizeof(buffer), 0)) <= 0) {
+								if ((recvbytecount = ::recv(newClient.clientSocket, buffer, RecvBuffSize - 1, 0)) <= 0) {
 									//Return 0 Network Outage
 									if (recvbytecount == 0) {
 										removeClientFromClientList(newClient.addr, newClient.port);
@@ -899,9 +969,9 @@ namespace meet
 								//接收数据 触发回调
 								else {
 									if (_recvDataEvent != NULL) {
+										buffer[recvbytecount] = '\0';
 										_recvDataEvent(newClient, recvbytecount, buffer);
 									}
-									memset(buffer, '\0', sizeof(buffer));
 								}
 							}
 							});
@@ -1111,11 +1181,14 @@ namespace meet
 		*/
 		int _maxCount = MEET_LISTEN_DEFAULT_MAXCONNECT;
 
+		static const int RecvBuffSize = 1024;
+
 		WSADATA _wsaDat{};
 		u_short _versionRequested = MAKEWORD(2, 2);
 		
-		struct sockaddr_in _sock4 = {};
-		struct sockaddr_in6 _sock6 = {};
+		struct sockaddr_storage _sock = {};
+		//struct sockaddr_in _sock4 = {};
+		//struct sockaddr_in6 _sock6 = {};
 
 		/**
 		 * @brief 服务端监听会话
@@ -1144,7 +1217,7 @@ namespace meet
 		RecvErrorEvent _recvErrorEvent = NULL;
 	};//class TCPServer
 
-
+	//class UDPClient
 	class UDPClient {
 
 	public:
@@ -1172,6 +1245,7 @@ namespace meet
 	public:
 
 		using RecvDataEvent = std::function<void(ULONG64, const char*, IP, u_short)>;
+		using RemoteSockCloseEvent = std::function<void(IP, u_short)>;
 
 	public:
 
@@ -1243,16 +1317,13 @@ namespace meet
 
 			if (supportipv4) {
 				if ((_sockfd4 = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) {
+					close();
 					return Error::socketError;	// -1
 				}
 			}
 			if (supportipv6) {
 				if ((_sockfd6 = ::socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) {
-					// 如果sock4初始化了 就要关闭
-					if (supportipv4 && _sockfd4) {
-						closesocket(_sockfd4);
-						_sockfd4 = NULL;
-					}
+					close();
 					return Error::socketError;	// -1
 				}
 			}
@@ -1320,9 +1391,9 @@ namespace meet
 		}
 		
 		// 红娘 通过中间人发送读取数据
-		void matchmaker() {
+		//void matchmaker() {
 
-		}
+		//}
 	private:
 		/**
 		 * @brief 处理接收消息返回-1的问题
@@ -1330,8 +1401,8 @@ namespace meet
 		 * @param socketbindAddr 类全局的判定开关,判断该socket是否传入了ip
 		 * @return false 跳出, true 接着执行 
 		*/
-		bool _recvFromError(int wsaLastError, bool& socketbindAddr) {
-			//说明套接字被关闭,不是错误
+		bool _recvFromError(int wsaLastError, bool& socketbindAddr, sockaddr* address) {
+			//说明本地套接字被关闭,不是错误
 			if (wsaLastError == WSAEINTR) {
 				socketbindAddr = false;
 				return false;
@@ -1342,6 +1413,14 @@ namespace meet
 					//Sleep(1);
 					return false;						// 这里跳出
 				}
+			}
+
+			// 远端SOCK被关闭
+			if (wsaLastError == WSAECONNRESET) {
+				if (_remoteSockCloseEvent != NULL) {
+					_remoteSockCloseEvent(address, ntohs((address->sa_family == (ADDRESS_FAMILY)meet::Family::IPV4) ? ((sockaddr_in*)address)->sin_port : ((sockaddr_in6*)address)->sin6_port));
+				}
+				return false;
 			}
 			// 接收失败 并出现了错误
 			printf_s("recvfrom v4 or v6: %d\n", wsaLastError);//10054 广播远程主机强制关闭了socket
@@ -1357,15 +1436,15 @@ namespace meet
 		bool _handleIPv4AcceptData(char buf[], int buffsize) {
 			sockaddr_in remoteAddr{};
 			int len = sizeof(remoteAddr);
-			int recvbytecount = ::recvfrom(_sockfd4, buf, buffsize, 0, (SOCKADDR*)&remoteAddr, &len);
+			int recvbytecount = ::recvfrom(_sockfd4, buf, buffsize - 1, 0, (SOCKADDR*)&remoteAddr, &len);
 			if (recvbytecount == SOCKET_ERROR) {
-				if (!_recvFromError(WSAGetLastError(), socketv4bindAddr)) {
+				if (!_recvFromError(WSAGetLastError(), socketv4bindAddr, (SOCKADDR*)&remoteAddr)) {
 					return false;
 				}
 			}
 			if (recvbytecount >= 0) {
+				buf[recvbytecount] = '\0';
 				_recvDataEvent(recvbytecount, buf, remoteAddr.sin_addr, ntohs(remoteAddr.sin_port));
-				memset(buf, '\0', buffsize);
 			}
 			return true;
 		}
@@ -1379,15 +1458,15 @@ namespace meet
 		bool _handleIPv6AcceptData(char buf[], int buffsize) {
 			sockaddr_in6 remoteAddr{};
 			int len = sizeof(remoteAddr);
-			int recvbytecount = ::recvfrom(_sockfd6, buf, buffsize, 0, (SOCKADDR*)&remoteAddr, &len);
+			int recvbytecount = ::recvfrom(_sockfd6, buf, buffsize - 1, 0, (SOCKADDR*)&remoteAddr, &len);
 			if (recvbytecount == SOCKET_ERROR) {
-				if (!_recvFromError(WSAGetLastError(), socketv6bindAddr)) {
+				if (!_recvFromError(WSAGetLastError(), socketv6bindAddr, (SOCKADDR*)&remoteAddr)) {
 					return false;
 				}
 			}
 			if (recvbytecount >= 0) {
+				buf[recvbytecount] = '\0';
 				_recvDataEvent(recvbytecount, buf, remoteAddr.sin6_addr, ntohs(remoteAddr.sin6_port));
-				memset(buf, '\0', buffsize);
 			}
 			return true;
 		}
@@ -1395,8 +1474,7 @@ namespace meet
 		std::thread _makeIPv4RecvThread() {
 			// 创建线程 从套接字接受数据
 			return std::thread([&]() {
-				char buffer[RecvBuffSize];
-				memset(buffer, '\0', RecvBuffSize);
+				char* buffer = new char[recvBuffSize];
 				while (true)
 				{
 					if (!_init) {
@@ -1405,25 +1483,28 @@ namespace meet
 					if (!supportipv4 || !_sockfd4) {
 						break;
 					}
-					// 你不接收数据那我就没必要 recv了
+					// 你不接收数据那我就 sleep
 					if (_recvDataEvent == NULL) {
-						break;
+						Sleep(10);
+						continue;
 					}
 					// 处理IPV4
 					if (socketv4bindAddr) {
-						if (!_handleIPv4AcceptData(buffer, RecvBuffSize)) {
-							continue;
+						if (!_handleIPv4AcceptData(buffer, recvBuffSize)) {
+							break;
 						}
 					}
 				}
+				delete[] buffer;
 				});
 		}
 
 		std::thread _makeIPv6RecvThread() {
 			// 创建线程 从套接字接受数据
 			return std::thread([&]() {
-				char buffer[RecvBuffSize];
-				memset(buffer, '\0', RecvBuffSize);
+				//char buffer[RecvBuffSize];
+				char* buffer = new char[recvBuffSize];
+				memset(buffer, '\0', recvBuffSize);
 				while (true)
 				{
 					if (!_init) {
@@ -1432,18 +1513,19 @@ namespace meet
 					if (!supportipv6 || !_sockfd6) {
 						break;
 					}
-					// 你不接收数据那我就没必要 recv了, 后面也没有机会设置 recv方法了
+					// 你不接收数据那我就 Sleep(10)
 					if (_recvDataEvent == NULL) {
-						break;
+						Sleep(10);
+						continue;
 					}
 					// 处理IPV6
 					if (socketv6bindAddr) {
-						if (!_handleIPv6AcceptData(buffer, RecvBuffSize)) {
-							continue;
+						if (!_handleIPv6AcceptData(buffer, recvBuffSize)) {
+							break;
 						}
 					}
 				}
-
+				delete[] buffer;
 				});
 		}
 
@@ -1452,9 +1534,14 @@ namespace meet
 			_recvDataEvent = recvDataEvent;
 		}
 
+		void OnRemoteSockClose(RemoteSockCloseEvent remoteSockCloseEvent) {
+			_remoteSockCloseEvent = remoteSockCloseEvent;
+		}
+
 	private:
 
 		RecvDataEvent _recvDataEvent = NULL;
+		RemoteSockCloseEvent _remoteSockCloseEvent = NULL;
 		
 	private:
 		bool _init = false;
@@ -1464,19 +1551,176 @@ namespace meet
 		bool supportipv6 = false;
 		bool _blockingmode = true;
 		bool _allowbroadcast = false;
-		static const int RecvBuffSize = 1024;
+		int recvBuffSize = 102400;
 
 
 		SOCKET _sockfd4{};
 		SOCKET _sockfd6{};
 	};
 
-
+	//class UDPServer
 	class UDPServer {
 	public:
-		void bind(IP ip, u_short port) {
-
+		UDPServer(){}
+		~UDPServer() {
+			close();
 		}
+
+		void close() {
+			_init = false;
+			if (_sockfd) {
+				closesocket(_sockfd);
+				WSACleanup();
+				_sockfd = NULL;
+			}
+		}
+	public:
+
+		using RecvDataEvent = std::function<void(ULONG64, const char*, IP, u_short)>;
+
+	public:
+
+		/**
+		 * @brief 设置阻塞模式(默认阻塞)
+		 * @param blocking
+		 * @return [Error::noError] [Error::inited]
+		*/
+		Error setBlockingMode(bool blocking) {
+			if (!_init) {
+				_blockingmode = blocking;
+				return Error::noError;
+			}
+			return Error::inited;
+		}
+
+	public:
+
+		Error InitAndBind(IP ip, u_short port) {
+			if (_init) {
+				return Error::inited;
+			}
+
+			if (!ip.isValid()) {
+				return Error::ipInvalid;
+			}
+
+			//Initializing the socket library
+			WSADATA wsadata; //Define a structure of type WSADATA to store the Windows Sockets data returned by the WSAStartup function call
+			WORD sock_version = MAKEWORD(2, 0); //Set the version number
+			if (WSAStartup(sock_version, &wsadata)) //Initialize the socket, start the build, and load "ws2_32.lib" into memory
+			{
+				return Error::initializationWinsockFailed;
+			}
+
+			_sockfd = socket((int)ip.IPFamily, SOCK_DGRAM, IPPROTO_UDP);
+			if (_sockfd == INVALID_SOCKET) {
+				WSACleanup();
+				return Error::socketError;
+			}
+
+			// 阻塞模式(默认)与非阻塞模式
+			if (!_blockingmode) {
+				u_long iMode = 1;
+				::ioctlsocket(_sockfd, FIONBIO, &iMode);
+			}
+
+			//sockaddr_storage sockAddr{};
+			sockaddr sockAddr{};
+			memset(&sockAddr, '\0', sizeof(sockAddr));
+			ip.toSockaddr(&sockAddr, port);
+			if (::bind(_sockfd, (sockaddr*)&sockAddr, ip.toSockaddrLen()) == SOCKET_ERROR) {
+				WSACleanup();
+				return Error::bindError;
+			}
+
+			_init = true;
+
+			auto recvthread = std::thread([&]() {
+				//char buffer[RecvBuffSize];
+				char* buffer = new char[recvBuffSize];
+				sockaddr_storage sockAddr{};
+				int sockAddrLen = sizeof(sockAddr);
+
+				for (;;) {
+					int recvDataLen = recvfrom(_sockfd, buffer, recvBuffSize - 1, 0, (sockaddr*)&sockAddr, &sockAddrLen);
+					if (recvDataLen == SOCKET_ERROR) {
+						int errid = WSAGetLastError();
+						if (!_blockingmode) {
+							if (errid == WSAEWOULDBLOCK) {			// 非阻塞模式下 这个说明没有数据可接受,是正常的
+								continue;							// 跳过本次循环
+							}
+						}
+						if (errid == WSAECONNRESET) {				// 远程主机关闭了这个SOCK // 得想办法发送到回调函数里
+							// TODO: 想办法发送到回调函数里
+							continue;
+						}
+
+						if (errid == WSAEMSGSIZE) {
+							// RecvBuffSize 值设置太小
+							perror("RecvBuffSize 值设置太小");
+							break;
+						}
+						if (errid == WSAEINTR) {					// 这里应该是因为调用了close 里面的WSACleanup，因为recv阻塞所以线程还没清掉
+							break;
+						}
+						printf_s("UDPServer - recvfrom错误: %d\n", errid);
+						break;
+					}
+					// 接受函数
+					if (recvDataLen >= 0) {
+						if (_recvDataEvent != NULL) {
+							buffer[recvDataLen] = '\0';
+							_recvDataEvent(recvDataLen, buffer, &sockAddr, ntohs((sockAddr.ss_family == (ADDRESS_FAMILY)Family::IPV4) ? ((sockaddr_in*)&sockAddr)->sin_port : ((sockaddr_in6*)&sockAddr)->sin6_port));
+
+						}
+					}
+				}
+				delete[] buffer;
+
+			});
+			recvthread.detach();
+
+			return Error::noError;
+		}
+
+	public:
+		Error sendData(IP ip, u_short port, const char* data, int len) {
+			if (!_init) {
+				return Error::uninitialized;
+			}
+			if (!ip.isValid()) {
+				return Error::ipInvalid;
+			}
+
+			sockaddr_storage sendAddr{};
+			int ret;
+			ret = sendto(_sockfd, data, len, 0, (sockaddr*)ip.toSockaddr(&sendAddr, port), ip.toSockaddrLen());
+			if (ret == SOCKET_ERROR) {
+				// 发送错误,应该关闭套接字
+				printf_s("sendto ret=-1:%d\n", WSAGetLastError());
+				return Error::sendFailed;
+			}
+			return Error::noError;
+		}
+
+
+	public:
+		void OnRecvData(RecvDataEvent recvDataEvent) {
+			_recvDataEvent = recvDataEvent;
+		}
+	private:
+
+		RecvDataEvent _recvDataEvent = NULL;
+
+	private:
+		bool _init = false;
+		bool _blockingmode = true;
+
+		int recvBuffSize = 102400;
+
+		SOCKET _sockfd{};
+		//SOCKET _sockfd4{};
+		//SOCKET _sockfd6{};
 	};
 
 }//namespace meet

@@ -27,6 +27,8 @@
 void startClient(meet::TCPClient& c);
 void startServer(meet::TCPServer& s);
 void startUDPClient();
+void startUDPServer();
+void StartUDPServerToMCBEServer(meet::IP remoteIp, u_short remotePort);
 
 int main() {
     for (;;) {
@@ -41,7 +43,8 @@ int main() {
         std::cout << "2 ---- 开启TCP客户端" << std::endl;
         std::cout << "3 ---- 开启UDP服务端" << std::endl;
         std::cout << "4 ---- 开启UDP客户端" << std::endl;
-        std::cout << "5/cls ---- 清屏" << std::endl;
+        std::cout << "5 ---- 开启UDP数据转发MCBEServer" << std::endl;
+        std::cout << "6/cls ---- 清屏" << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 3);
         std::cout << "请输入一个选项:";
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
@@ -63,14 +66,18 @@ int main() {
         // UDP Server
         else if (userinput == "3") {
             system("title UDP Server / 服务端");
-            
+            startUDPServer();
         }
         // UDP Client
         else if (userinput == "4") {
             system("title UDP Client / 客户端");           // 已证实 A通过出口Socket A' 连接B， C就可以通过发送数据到A' 而连接A
             startUDPClient();
         }
-        else if (userinput == "5" || userinput == "cls") {
+        else if (userinput == "5") {
+            system("title UDP Server数据转发toMC");           // 已证实 A通过出口Socket A' 连接B， C就可以通过发送数据到A' 而连接A
+            StartUDPServerToMCBEServer("172.65.240.23", 19132);
+        }
+        else if (userinput == "6" || userinput == "cls") {
             system("cls");
         }
     }

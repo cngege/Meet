@@ -23,6 +23,12 @@
     <ClCompile Include="test_udpClient.cpp">
       <Filter>test</Filter>
     </ClCompile>
+    <ClCompile Include="test_udpServer.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test_udpServerToMCBEServer.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Meet.hpp">

@@ -31,6 +31,11 @@ void sendToPreset() {
         std::cout << "[" << ip.toString() << "/" << std::to_string(port) << "] ";
         std::cout << d << std::endl;
         });
+
+    uc.OnRemoteSockClose([](meet::IP ip, u_short port) {
+        std::cout << "远程主机:" << ip.toString() << "/" << std::to_string(port) << " 的SOCK已经关闭";
+        });
+
     uc.Init();
 
     char pack[] = { (char)0x01, (char)0x00, (char)0x00, (char)0x00, (char)0x00, (char)0x24, (char)0x0d, (char)0x12, (char)0xd3, (char)0x00, (char)0xff, (char)0xff, (char)0x00, (char)0xfe, (char)0xfe, (char)0xfe, (char)0xfe, (char)0xfd, (char)0xfd, (char)0xfd, (char)0xfd, (char)0x12, (char)0x34, (char)0x56, (char)0x78 };
@@ -53,6 +58,11 @@ void sendToRemote() {
         std::cout << "[" << ip.toString() << "/" << std::to_string(port) << "] ";
         std::cout << data << std::endl;
         });
+
+    uc.OnRemoteSockClose([](meet::IP ip, u_short port) {
+        std::cout << "远程主机:" << ip.toString() << "/" << std::to_string(port) << " 的SOCK已经关闭";
+        });
+
     uc.Init();
 
     for (;;) {
