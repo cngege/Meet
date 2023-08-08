@@ -12,6 +12,7 @@
 ### 🌭我要怎么才能在自己的项目里面使用这个库?🌭 ###
 
 - 🍵很简单, 先将这个项目克隆到你的项目所在的计算机上
+  - 如： `git clone https://github.com/cngege/Meet.git`
 - ☕将`include`文件夹中的`Meet.hpp`复制到你的项目中
 - 🍺然后引用 `#include "Meet.hpp"`文件即可
 - 🍻之后就是使用API 来调用这个库就好了
