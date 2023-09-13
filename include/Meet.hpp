@@ -506,6 +506,14 @@ namespace meet
 			return _recvBuffSize;
 		}
 
+		/**
+		 * @brief 现在是否是已经连接
+		 * @return 
+		*/
+		bool isConnected() {
+			return Connected;
+		}
+
 
 	public:
 
@@ -513,7 +521,7 @@ namespace meet
 		 * @brief To connect to a remote host, you must connect without establishing a connection
 		 * @param ip host
 		 * @param port port
-		 * @return 
+		 * @return [Error::connecting / Error::initializationWinsockFailed / Error::socketError / Error::connectFailed / Error::noError]
 		*/
 		Error connect(IP ip, u_short port) {
 			if (Connected) {
@@ -567,7 +575,7 @@ namespace meet
 
 			Connected = true;
 			// Set the connection to non-blocking mode recv return in time
-			if (!_blockingmode) {
+			if (!_blockingMode) {
 				u_long iMode = 1;
 				::ioctlsocket(_sockfd, FIONBIO, &iMode);
 			}
@@ -651,8 +659,8 @@ namespace meet
 			if (!Connected) {
 				return Error::noConnected;
 			}
-			char* p = data;
-			int len = size;
+			char* p = data;							// 数据由前向后发送,发送后指针右移
+			int len = size;							// 剩余要发送数据的大小
 			while (len > 0) {
 				int sendcount = ::send(_sockfd, p, len, 0);
 				if (sendcount < 0) {				// 等于0 表示剩余缓冲区空间不足,要等待协议将数据发送完
@@ -671,10 +679,18 @@ namespace meet
 		*/
 		Error setBlockingMode(bool blocking) {
 			if (!Connected) {
-				_blockingmode = blocking;
+				_blockingMode = blocking;
 				return Error::noError;
 			}
 			return Error::connecting;
+		}
+
+		/**
+		 * @brief 是否是阻塞模式
+		 * @return
+		*/
+		bool isBlockingMode() {
+			return _blockingMode;
 		}
 
 		/**
@@ -727,7 +743,7 @@ namespace meet
 						}
 
 						//阻塞模式
-						if (c->_blockingmode) {
+						if (c->_blockingMode) {
 							if (recvbytecount == SOCKET_ERROR) {
 								if (c->_recvErrorEvent != NULL) {
 									c->_recvErrorEvent(recvbytecount);
@@ -758,7 +774,7 @@ namespace meet
 		//struct sockaddr_in _sock4 = {};
 		//struct sockaddr_in6 _sock6 = {};
 
-		bool _blockingmode = true;
+		bool _blockingMode = true;
 		Family _family = Family::IPV4;
 
 		std::thread _recv_thread;
