@@ -573,7 +573,7 @@ namespace meet
 			}
 
 			///Open a thread Triggers a listening event after receiving and processing a message
-			_recv_thread = std::thread(startRecv, this);
+			_recv_thread = std::thread(&TCPClient::startRecv, this);
 			_recv_thread.detach();
 			return Error::noError;
 		};
@@ -715,47 +715,46 @@ namespace meet
 		 * @brief 线程函数,开启一个循环接受网络包,并对相关状态进行分析 / Thread function, responsible for receiving network packets, and classify and analyze the processing
 		 * @param c TCP客户端 / TCPClient Instance
 		*/
-		void startRecv(TCPClient* c) {
-			if (c->Connected) {
+		void startRecv() {
+			if (Connected) {
 
 				char* buffer = new char[_recvBuffSize];
 				//char buffer[RecvBuffSize];
 				memset(buffer, '\0', _recvBuffSize);
-
-				while (c->Connected) {
+				while (Connected) {
 					int recvbytecount;
-					if ((recvbytecount = recv(c->_sockfd, buffer, _recvBuffSize - 1, 0)) <= 0) {
+					if ((recvbytecount = recv(_sockfd, buffer, _recvBuffSize - 1, 0)) <= 0) {
 						//Return 0 Network Outage
 						if (recvbytecount == 0) {
-							c->Connected = false;
-							if (c->_disConnectEvent != NULL) {
-								c->_disConnectEvent();
+							Connected = false;
+							if (_disConnectEvent != NULL) {
+								_disConnectEvent();
 							}
 							break;
 						}
 
 						//阻塞模式
-						if (c->_blockingMode) {
+						if (_blockingMode) {
 							if (recvbytecount == SOCKET_ERROR) {
-								if (c->_recvErrorEvent != NULL) {
-									c->_recvErrorEvent(recvbytecount);
+								if (_recvErrorEvent != NULL) {
+									_recvErrorEvent(recvbytecount);
 								}
 							}
 						}
 
-					}//if ((recvbytecount = recv(c->sockfd, buffer, sizeof(buffer), 0)) <= 0)
+					}//if ((recvbytecount = recv(sockfd, buffer, sizeof(buffer), 0)) <= 0)
 
 					//接收数据 触发回调
 					else {
-						if (c->_recvDataEvent != NULL) {
+						if (_recvDataEvent != NULL) {
 							buffer[recvbytecount] = '\0';
-							c->_recvDataEvent(recvbytecount, buffer);
+							_recvDataEvent(recvbytecount, buffer);
 						}
 					}
-				}//while (c->connected)
+				}//while (connected)
 				delete[] buffer;
-			}//if(!c->connected)
-		};//static void startRecv(TCPClient* c)
+			}//if(!connected)
+		};//void startRecv()
 
 	public:
 
@@ -1008,7 +1007,7 @@ namespace meet
 						auto _recv_thread = std::thread([this, newClient]() {
 
 							char* buffer = new char[_recvBuffSize];
-							memset(buffer, '\0', sizeof(buffer));
+							memset(buffer, '\0', _recvBuffSize);
 							while (_serverRunning) {
 								int recvbytecount;
 								if ((recvbytecount = ::recv(newClient.clientSocket, buffer, _recvBuffSize - 1, 0)) <= 0) {
