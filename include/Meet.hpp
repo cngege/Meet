@@ -486,6 +486,30 @@ namespace meet
 	public:
 
 		/**
+		 * @brief 设置接收数据时数据缓冲区的大小
+		 * @param size 
+		 * @return [Error::connecting / Error::noError]
+		*/
+		Error setRecvBufferSize(int size) {
+			if (Connected) {
+				return Error::connecting;
+			}
+			_recvBuffSize = size;
+			return Error::noError;
+		}
+
+		/**
+		 * @brief 获取已经设置的接收数据的数据缓冲区的大小
+		 * @return 
+		*/
+		int getRecvBufferSize() {
+			return _recvBuffSize;
+		}
+
+
+	public:
+
+		/**
 		 * @brief To connect to a remote host, you must connect without establishing a connection
 		 * @param ip host
 		 * @param port port
@@ -683,15 +707,16 @@ namespace meet
 		 * @brief 线程函数,开启一个循环接受网络包,并对相关状态进行分析 / Thread function, responsible for receiving network packets, and classify and analyze the processing
 		 * @param c TCP客户端 / TCPClient Instance
 		*/
-		static void startRecv(TCPClient* c) {
+		void startRecv(TCPClient* c) {
 			if (c->Connected) {
 
-				char buffer[RecvBuffSize];
-				memset(buffer, '\0', RecvBuffSize);
+				char* buffer = new char[_recvBuffSize];
+				//char buffer[RecvBuffSize];
+				memset(buffer, '\0', _recvBuffSize);
 
 				while (c->Connected) {
 					int recvbytecount;
-					if ((recvbytecount = recv(c->_sockfd, buffer, RecvBuffSize - 1, 0)) <= 0) {
+					if ((recvbytecount = recv(c->_sockfd, buffer, _recvBuffSize - 1, 0)) <= 0) {
 						//Return 0 Network Outage
 						if (recvbytecount == 0) {
 							c->Connected = false;
@@ -720,11 +745,12 @@ namespace meet
 						}
 					}
 				}//while (c->connected)
+				delete[] buffer;
 			}//if(!c->connected)
 		};//static void startRecv(TCPClient* c)
 
 	public:
-		static const int RecvBuffSize = 1024;
+
 		bool Connected = false;
 
 	private:
@@ -736,6 +762,8 @@ namespace meet
 		Family _family = Family::IPV4;
 
 		std::thread _recv_thread;
+
+		int _recvBuffSize = 1024;
 
 		/**
 		 * @brief 断开连接时触发的事件
