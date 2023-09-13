@@ -8,14 +8,6 @@
 #include <WS2tcpip.h>
 #pragma comment(lib,"ws2_32.lib")
 
-#ifndef ushort
-//#define ushort unsigned short
-#endif
-
-//#ifndef ulong
-//#define ulong unsigned long
-//#endif
-
 #ifndef MEET_LISTEN_BACKLOG
 #define MEET_LISTEN_BACKLOG 5
 #endif // !MEET_LISTEN_BACKLOG
@@ -935,10 +927,12 @@ namespace meet
 
 			_listenPort = listenPort;
 
+			// 初始化设备
 			if (WSAStartup(_versionRequested, &_wsaDat) != 0) {
 				return Error::initializationWinsockFailed;
 			}
 
+			// 创建Socket
 			{
 				memset(&_sock, 0, sizeof(struct sockaddr_storage));
 				_listenAddr.toSockaddr(&_sock, _listenPort);
@@ -1005,7 +999,7 @@ namespace meet
 					}
 					*/
 
-					if (clientList.size() < _maxCount) {
+					if (clientList.size() < _maxCount || _maxCount < 0) {
 
 						MeetClient newClient = { .clientSocket = c_socket, .addr = clientAddress , .port = clientPort };
 						clientList.push_back(newClient);
@@ -1252,7 +1246,7 @@ namespace meet
 		/**
 		 * @brief 监听地址
 		*/
-		IP _listenAddr = std::string("0.0.0.0");
+		IP _listenAddr = "0.0.0.0";
 		/**
 		 * @brief 监听端口
 		*/
@@ -1262,8 +1256,6 @@ namespace meet
 		*/
 		int _maxCount = MEET_LISTEN_DEFAULT_MAXCONNECT;
 
-		//static const int RecvBuffSize = 1024;
-		
 		/**
 		 * @brief 接收数据的数据缓冲区大小
 		*/
