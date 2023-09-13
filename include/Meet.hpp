@@ -887,6 +887,27 @@ namespace meet
 		}
 
 		/**
+		 * @brief 设置接收数据时数据缓冲区的大小
+		 * @param size
+		 * @return [Error::serverIsStarted / Error::noError]
+		*/
+		Error setRecvBufferSize(int size) {
+			if (_serverRunning) {
+				return Error::serverIsStarted;
+			}
+			_recvBuffSize = size;
+			return Error::noError;
+		}
+
+		/**
+		 * @brief 获取已经设置的接收数据的数据缓冲区的大小
+		 * @return
+		*/
+		int getRecvBufferSize() {
+			return _recvBuffSize;
+		}
+
+		/**
 		 * @brief 开启一个服务单的监听, 监听地址默认0.0.0.0
 		 * @param listenPort 监听端口 0-65535
 		 * @return 是否有错误
@@ -975,11 +996,12 @@ namespace meet
 
 						//创建线程 监听客户端传来的消息
 						auto _recv_thread = std::thread([this, newClient]() {
-							char buffer[RecvBuffSize];
+
+							char* buffer = new char[_recvBuffSize];
 							memset(buffer, '\0', sizeof(buffer));
 							while (_serverRunning) {
 								int recvbytecount;
-								if ((recvbytecount = ::recv(newClient.clientSocket, buffer, RecvBuffSize - 1, 0)) <= 0) {
+								if ((recvbytecount = ::recv(newClient.clientSocket, buffer, _recvBuffSize - 1, 0)) <= 0) {
 									//Return 0 Network Outage
 									if (recvbytecount == 0) {
 										removeClientFromClientList(newClient.addr, newClient.port);
@@ -1008,6 +1030,7 @@ namespace meet
 									}
 								}
 							}
+							delete[] buffer;
 							});
 						_recv_thread.detach();
 
@@ -1223,7 +1246,12 @@ namespace meet
 		*/
 		int _maxCount = MEET_LISTEN_DEFAULT_MAXCONNECT;
 
-		static const int RecvBuffSize = 1024;
+		//static const int RecvBuffSize = 1024;
+		
+		/**
+		 * @brief 接收数据的数据缓冲区大小
+		*/
+		int _recvBuffSize = 1024;
 
 		WSADATA _wsaDat{};
 		u_short _versionRequested = MAKEWORD(2, 2);
