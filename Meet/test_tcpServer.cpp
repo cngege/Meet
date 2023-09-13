@@ -55,13 +55,15 @@ void startServer(meet::TCPServer& s) {
     s.setBlockingMode(true);
 
     // 监听客户端断开连接的消息
-    s.onClientDisConnect([](meet::TCPServer::MeetClient meetClient) {
+    s.onClientDisConnect([&](meet::TCPServer::MeetClient meetClient) {
         printf("\n[%s -:- %d][连接] 断开连接\n", meetClient.addr.toString().c_str(), meetClient.port);
+        system(std::format("title TCP Server / 服务端 [{}/{}]", s.GetALLClient().size(), s.getMaxConnectCount()).c_str());
         });
 
     // 监听客户端连接的消息
-    s.onNewClientConnect([](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/) {
+    s.onNewClientConnect([&](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/) {
         printf("\n[%s -:- %d][连接] 连接成功\n", meetClient.addr.toString().c_str(), meetClient.port);
+        system(std::format("title TCP Server / 服务端 [{}/{}]",s.GetALLClient().size(), s.getMaxConnectCount()).c_str());
         });
 
     // 当有数据到达时监听消息
@@ -97,8 +99,15 @@ void startServer(meet::TCPServer& s) {
         return;
     }
 
+    // 打印 服务端配置情况
+    std::cout << std::format("Address: {}:{}", s.getListenAddress().toString(), s.getListenPort()) << std::endl;
+    std::cout << std::format("BlockingMode: {}", s.isBlockingMode()) << std::endl;
+    std::cout << std::format("MaxClientCount: {}", s.getMaxConnectCount()) << std::endl;
+    std::cout << std::endl;
+
     for (;;) {
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
+        std::cout << std::format("CurrentClientCount: {}", s.GetALLClient().size()) << std::endl;
         std::cout << "0 ---- 断开所有连接并退出服务端" << std::endl;
         std::cout << "1 ---- 选择一个客户端,并进行操作" << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 3);

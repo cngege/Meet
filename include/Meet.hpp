@@ -175,6 +175,7 @@ namespace meet
 		}
 	}//static std::string getString(Error errorCode)
 
+#pragma region IP
 	/// <summary>
 	/// 
 	/// </summary>
@@ -435,7 +436,9 @@ namespace meet
 		*/
 		bool _valid = false;
 	};//class IP
+#pragma endregion
 
+#pragma region TCPClient
 
 	// class TCPClient
 	class TCPClient {
@@ -749,7 +752,9 @@ namespace meet
 		*/
 		RecvErrorEvent _recvErrorEvent = NULL;
 	};//class TCPClient
+#pragma endregion
 
+#pragma region TCPServer
 	//class TCPServer
 	class TCPServer {
 	public:
@@ -809,6 +814,14 @@ namespace meet
 		}
 
 		/**
+		 * @brief 获取允许最大的客户端数量
+		 * @return 
+		*/
+		int getMaxConnectCount() {
+			return _maxCount;
+		}
+
+		/**
 		 * @brief 设置服务端的监听地址
 		 * @param address 监听地址比如 0.0.0.0 / 127.0.0.0 / ::
 		 * @return 是否有错误 [Error::serverIsStarted / Error::noError]
@@ -819,6 +832,30 @@ namespace meet
 			}
 			_listenAddr = address;					// 因为构造函数中有string 所以可以隐式转换
 			return Error::noError;
+		}
+
+		/**
+		 * @brief 获取监听地址
+		 * @return 
+		*/
+		IP getListenAddress() {
+			return _listenAddr;
+		}
+
+		/**
+		 * @brief 获取监听端口
+		 * @return 
+		*/
+		u_short getListenPort() {
+			return _listenPort;
+		}
+
+		/**
+		 * @brief 服务端是否正在运行
+		 * @return 是否正在监听
+		*/
+		bool isRunning() {
+			return _serverRunning;
 		}
 
 		/**
@@ -849,37 +886,6 @@ namespace meet
 				}
 			}
 
-			// 分IP协议 对本地地址进行绑定  // (由上面 sockaddr_storage 代替)
-			{
-				/*
-				if (_listenAddr.IPFamily == Family::IPV4) {
-					memset(&_sock4, 0, sizeof(struct sockaddr_in));
-					_sock4.sin_family = (ADDRESS_FAMILY)_listenAddr.IPFamily;
-					_sock4.sin_port = htons(_listenPort);
-					_sock4.sin_addr = _listenAddr.InAddr;
-					_socket = socket((ADDRESS_FAMILY)_listenAddr.IPFamily, SOCK_STREAM, IPPROTO_TCP);
-					if (_socket == INVALID_SOCKET) {
-						return Error::socketError;
-					}
-					if (::bind(_socket, (sockaddr*)&_sock4, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
-						return Error::bindError;
-					}
-				}
-				else {
-					memset(&_sock6, 0, sizeof(struct sockaddr_in6));
-					_sock6.sin6_family = (ADDRESS_FAMILY)_listenAddr.IPFamily;
-					_sock6.sin6_port = htons(_listenPort);
-					_sock6.sin6_addr = _listenAddr.InAddr6;
-					_socket = socket((ADDRESS_FAMILY)_listenAddr.IPFamily, SOCK_STREAM, IPPROTO_TCP);
-					if (_socket == INVALID_SOCKET) {
-						return Error::socketError;
-					}
-					if (::bind(_socket, (sockaddr*)&_sock6, sizeof(struct sockaddr_in6)) == SOCKET_ERROR) {
-						return Error::bindError;
-					}
-				}
-				*/
-			}
 
 			// 系统API建立监听,这里第二个参数表示在建立握手时队列最多可等待的连接数
 			if (::listen(_socket, MEET_LISTEN_BACKLOG) == SOCKET_ERROR) {
@@ -1007,6 +1013,14 @@ namespace meet
 				return Error::noError;
 			}
 			return Error::serverIsStarted;
+		}
+
+		/**
+		 * @brief 是否是阻塞模式
+		 * @return 
+		*/
+		bool isBlockingMode() {
+			return _blockingMode;
 		}
 
 	private:
@@ -1216,7 +1230,9 @@ namespace meet
 		RecvDataEvent _recvDataEvent = NULL;
 		RecvErrorEvent _recvErrorEvent = NULL;
 	};//class TCPServer
+#pragma endregion
 
+#pragma region UDPClient
 	//class UDPClient
 	class UDPClient {
 
@@ -1557,7 +1573,9 @@ namespace meet
 		SOCKET _sockfd4{};
 		SOCKET _sockfd6{};
 	};
+#pragma endregion
 
+#pragma region UDPServer
 	//class UDPServer
 	class UDPServer {
 	public:
@@ -1635,8 +1653,14 @@ namespace meet
 
 			_init = true;
 
-			auto recvthread = std::thread([&]() {
-				//char buffer[RecvBuffSize];
+			_makeRecvThread().detach();
+
+			return Error::noError;
+		}
+	public:
+		std::thread _makeRecvThread() {
+			// 创建线程 从套接字接受数据
+			return std::thread([&]() {
 				char* buffer = new char[recvBuffSize];
 				sockaddr_storage sockAddr{};
 				int sockAddrLen = sizeof(sockAddr);
@@ -1650,7 +1674,7 @@ namespace meet
 								continue;							// 跳过本次循环
 							}
 						}
-						if (errid == WSAECONNRESET) {				// 远程主机关闭了这个SOCK // 得想办法发送到回调函数里
+						if (errid == WSAECONNRESET) {				// 远程主机关闭了这个SOCK // 得想办法发送到回调函数里 告诉用户
 							// TODO: 想办法发送到回调函数里
 							continue;
 						}
@@ -1676,11 +1700,7 @@ namespace meet
 					}
 				}
 				delete[] buffer;
-
-			});
-			recvthread.detach();
-
-			return Error::noError;
+				});
 		}
 
 	public:
@@ -1720,5 +1740,6 @@ namespace meet
 
 		SOCKET _sockfd{};
 	};
+#pragma endregion
 
 }//namespace meet
