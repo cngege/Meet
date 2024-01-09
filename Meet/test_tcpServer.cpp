@@ -41,14 +41,14 @@ void startServer(meet::TCPServer& s) {
         std::string count_input;
         std::getline(std::cin, count_input);
         auto count = atoi(count_input.c_str());
-        if (count <= 0) {
-            std::cout << "你乱输什么啊,我替你选吧,就……10个吧" << std::endl;
-            maxconn = 10;
-        }
-        else {
-            maxconn = count;
-        }
-
+        //if (count <= 0) {
+        //    std::cout << "你乱输什么啊,我替你选吧,就……10个吧" << std::endl;
+        //    maxconn = 10;
+        //}
+        //else {
+        //    maxconn = count;
+        //}
+        maxconn = count;
     }
 
     // 设置为阻塞模式

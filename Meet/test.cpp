@@ -29,6 +29,7 @@ void startServer(meet::TCPServer& s);
 void startUDPClient();
 void startUDPServer();
 void StartUDPServerToMCBEServer(meet::IP remoteIp, u_short remotePort);
+void startClientx100000();
 
 int main() {
     for (;;) {
@@ -44,7 +45,8 @@ int main() {
         std::cout << "3 ---- 开启UDP服务端" << std::endl;
         std::cout << "4 ---- 开启UDP客户端" << std::endl;
         std::cout << "5 ---- 开启UDP数据转发MCBEServer" << std::endl;
-        std::cout << "6/cls ---- 清屏" << std::endl;
+        std::cout << "6 ---- 开启100000客户端建立连接并发送数据" << std::endl;
+        std::cout << "7/cls ---- 清屏" << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 3);
         std::cout << "请输入一个选项:";
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
@@ -77,7 +79,11 @@ int main() {
             system("title UDP Server数据转发toMC");           // 已证实 A通过出口Socket A' 连接B， C就可以通过发送数据到A' 而连接A
             StartUDPServerToMCBEServer("172.65.240.23", 19132);
         }
-        else if (userinput == "6" || userinput == "cls") {
+        else if (userinput == "6") {
+            system("title TCP压测");
+            startClientx100000();
+        }
+        else if (userinput == "7" || userinput == "cls") {
             system("cls");
         }
     }

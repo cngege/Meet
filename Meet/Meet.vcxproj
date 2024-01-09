@@ -147,6 +147,7 @@
   <ItemGroup>
     <ClCompile Include="test.cpp" />
     <ClCompile Include="test_tcpClient.cpp" />
+    <ClCompile Include="test_tcpClientx100000.cpp" />
     <ClCompile Include="test_tcpServer.cpp" />
     <ClCompile Include="test_udpClient.cpp" />
     <ClCompile Include="test_udpServer.cpp" />

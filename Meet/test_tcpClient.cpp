@@ -34,7 +34,7 @@ void startClient(meet::TCPClient& c) {
         });
 
     // 手动设置连接服务端的地址端口
-    std::string ip_input, fm_input;
+    std::string ip_input;
     USHORT port;
     for (;;) {
         std::cout << "请分别输入要连接服务端的地址,端口,协议(4/6)(默认127.0.0.1:3000)" << std::endl;
