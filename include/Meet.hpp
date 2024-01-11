@@ -8,13 +8,14 @@
 #include <WS2tcpip.h>
 #pragma comment(lib,"ws2_32.lib")
 
+// 表示在建立握手时队列最多可等待的连接数
 #ifndef MEET_LISTEN_BACKLOG
 #define MEET_LISTEN_BACKLOG 5
 #endif // !MEET_LISTEN_BACKLOG
 
 // 默认的最大连接数 在没有设置的时候
 #ifndef MEET_LISTEN_DEFAULT_MAXCONNECT
-#define MEET_LISTEN_DEFAULT_MAXCONNECT 30
+#define MEET_LISTEN_DEFAULT_MAXCONNECT -1
 #endif // !MEET_LISTEN_DEFAULT_MAXCONNECT
 
 
