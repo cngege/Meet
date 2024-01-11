@@ -41,13 +41,6 @@ void startServer(meet::TCPServer& s) {
         std::string count_input;
         std::getline(std::cin, count_input);
         auto count = atoi(count_input.c_str());
-        //if (count <= 0) {
-        //    std::cout << "你乱输什么啊,我替你选吧,就……10个吧" << std::endl;
-        //    maxconn = 10;
-        //}
-        //else {
-        //    maxconn = count;
-        //}
         maxconn = count;
     }
 
@@ -67,12 +60,19 @@ void startServer(meet::TCPServer& s) {
         });
 
     // 当有数据到达时监听消息
-    s.onRecvData([](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/, ULONG64 len, const char* data) {
+    s.onRecvData([&](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/, ULONG64 len, const char* data) {
         if (ServerWriteFile && ServerWriteFileIP == meetClient.addr.toString() && ServerWriteFilePort == meetClient.port) {
             ServerWriteFileIO.write(data, len);
             ServerWriteFileIO.flush();
         }
         else {
+            // 检查是不是exit,则断开连接
+            if (std::string(data) == "exit") {
+                meetClient.disConnect();
+                printf("\n[%s -:- %d][命令]: %s", meetClient.addr.toString().c_str(), meetClient.port, "断开连接命令");
+                system(std::format("title TCP Server / 服务端 [{}/{}]", s.GetALLClient().size(), s.getMaxConnectCount()).c_str());
+                return;
+            }
             printf("\n[%s -:- %d][数据][%I64d字节]:", meetClient.addr.toString().c_str(), meetClient.port, len);
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 9);
             std::cout << std::string(data) << std::endl;

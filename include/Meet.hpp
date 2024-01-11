@@ -799,9 +799,21 @@ namespace meet
 			SOCKET clientSocket;
 			IP addr;
 			u_short port;
+		private:
+			TCPServer* server;
+		public:
+			MeetClient(TCPServer* ser, SOCKET socket, IP address, u_short p) : server(ser){
+				clientSocket = socket;
+				addr = address;
+				port = p;
+			}
 
 			bool operator==(const MeetClient& c) const {
 				return this->addr == c.addr && this->port == c.port;
+			}
+
+			Error disConnect() {
+				return server->disClientConnect(addr, port);
 			}
 		};
 
@@ -820,6 +832,10 @@ namespace meet
 			close();
 		}
 
+
+		//TCPServer(TCPServer& tcpserver) {
+
+		//}
 	public:
 
 		/**
@@ -1001,7 +1017,7 @@ namespace meet
 
 					if (clientList.size() < _maxCount || _maxCount < 0) {
 
-						MeetClient newClient = { .clientSocket = c_socket, .addr = clientAddress , .port = clientPort };
+						MeetClient newClient(this, c_socket, clientAddress, clientPort);
 						clientList.push_back(newClient);
 
 						//创建线程 监听客户端传来的消息
@@ -1140,12 +1156,9 @@ namespace meet
 			return Error::noFoundClient;
 		};
 
-		//Error disClientConnect(MeetClient& client) {
-		//	if (!_serverRunning) {
-		//		return Error::serverNotStarted;
-		//	}
-
-		//}
+		Error disClientConnect(MeetClient& client) {
+			return disClientConnect(client.addr, client.port);
+		}
 
 
 		/**
