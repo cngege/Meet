@@ -212,7 +212,6 @@ namespace meet
 
 		IP(const char* ipdom) : IP(std::string(ipdom)) {}
 
-
 		IP(IN_ADDR inaddr) {
 			IPFamily = Family::IPV4;
 			InAddr = inaddr;
@@ -327,7 +326,6 @@ namespace meet
 			return saddr;
 		}
 
-
 		int toSockaddrLen() {
 			return (this->IPFamily == Family::IPV4) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 		}
@@ -352,7 +350,6 @@ namespace meet
 
 		/**
 		 * @brief 尝试将域名转为IP地址 一个域名(主机名)可能解析为多个IP
-		 * @param f 地址协议 IPV4/IPV6
 		 * @param dom 域名
 		 * @return 
 		*/
@@ -394,7 +391,21 @@ namespace meet
 		//	this->_valid = ip._valid;
 		//	return *this;
 		//}
-
+		IP& operator=(const IP& copy) {
+			if (this == &copy) {
+				return *this;
+			}
+			if (copy._valid) {
+				if (copy.IPFamily == Family::IPV4) {
+					this->InAddr = copy.InAddr;
+				}
+				else {
+					this->InAddr6 = copy.InAddr6;
+				}
+			}
+			this->_valid = copy._valid;
+			return *this;
+		}
 
 		bool operator==(const IP& ip) const {
 			if (this->_valid != ip._valid || this->IPFamily != ip.IPFamily) {
@@ -405,7 +416,6 @@ namespace meet
 			}
 			return true;
 		}
-
 
 	public:
 		/**
@@ -796,25 +806,57 @@ namespace meet
 	public:
 		struct MeetClient
 		{
-			SOCKET clientSocket;
-			IP addr;
-			u_short port;
 		private:
-			TCPServer* server;
+			SOCKET _clientSocket;
+			IP _addr;
+			u_short _port;
+			TCPServer* _server;
 		public:
-			MeetClient(TCPServer* ser, SOCKET socket, IP address, u_short p) : server(ser){
-				clientSocket = socket;
-				addr = address;
-				port = p;
+			MeetClient(TCPServer* ser, SOCKET socket, IP address, u_short port) : _server(ser){
+				_clientSocket = socket;
+				_addr = address;
+				_port = port;
+			}
+
+			/**
+			 * @brief 获取客户端会话接口
+			*/
+			SOCKET getSocket() const {
+				return _clientSocket;
+			}
+
+			/**
+			 * @brief 获取客户端IP
+			*/
+			IP getIp() const {
+				return _addr;
+			}
+
+			/**
+			 * @brief 获取客户端端口
+			*/
+			u_short getPort() const {
+				return _port;
 			}
 
 			bool operator==(const MeetClient& c) const {
-				return this->addr == c.addr && this->port == c.port;
+				return this->_server == c._server && this->_addr == c._addr && this->_port == c._port;
 			}
 
+			/**
+			 * @brief 断开这个客户端的连接
+			*/
 			Error disConnect() {
-				return server->disClientConnect(addr, port);
+				return _server->disClientConnect(_addr, _port);
 			}
+
+			/**
+			 * @brief 客户端信息转为字符串
+			*/
+			std::string toString() const {
+				return _addr.toString() + ":" + std::to_string(_port);
+			}
+
 		};
 
 		using NewClientConnectEvent = std::function<void(MeetClient)>;
@@ -831,7 +873,6 @@ namespace meet
 		~TCPServer() {
 			close();
 		}
-
 
 		//TCPServer(TCPServer& tcpserver) {
 
@@ -991,30 +1032,6 @@ namespace meet
 					clientAddress = IP(&remoteAddr);
 					clientPort = ntohs((remoteAddr.ss_family == (ADDRESS_FAMILY)Family::IPV4)? ((sockaddr_in*)&remoteAddr)->sin_port : ((sockaddr_in6*)&remoteAddr)->sin6_port);
 
-					/*
-					// 这个判断不能简写 struct sockaddr remoteAddr = {}; 因为sockaddr长度不够会导致ipv6连接进来但无法获取到
-					if (_listenAddr.IPFamily == Family::IPV4) {
-						struct sockaddr_in remoteAddr = {};
-						int nAddrlen = sizeof(remoteAddr);
-						c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
-						if (c_socket == INVALID_SOCKET) {   //无效的套接字
-							continue;
-						}
-						clientAddress = IP(remoteAddr.sin_addr);
-						clientPort = ntohs(remoteAddr.sin_port);
-					}
-					else {
-						struct sockaddr_in6 remoteAddr = {};
-						int nAddrlen = sizeof(remoteAddr);
-						c_socket = ::accept(_socket, (sockaddr*)&remoteAddr, &nAddrlen); //默认应该会在这里阻塞
-						if (c_socket == INVALID_SOCKET) {   //无效的套接字
-							continue;
-						}
-						clientAddress = IP(remoteAddr.sin6_addr);
-						clientPort = ntohs(remoteAddr.sin6_port);
-					}
-					*/
-
 					if (clientList.size() < _maxCount || _maxCount < 0) {
 
 						MeetClient newClient(this, c_socket, clientAddress, clientPort);
@@ -1027,10 +1044,10 @@ namespace meet
 							memset(buffer, '\0', _recvBuffSize);
 							while (_serverRunning) {
 								int recvbytecount;
-								if ((recvbytecount = ::recv(newClient.clientSocket, buffer, _recvBuffSize - 1, 0)) <= 0) {
+								if ((recvbytecount = ::recv(newClient.getSocket(), buffer, _recvBuffSize - 1, 0)) <= 0) {
 									//Return 0 Network Outage
 									if (recvbytecount == 0) {
-										removeClientFromClientList(newClient.addr, newClient.port);
+										removeClientFromClientList(newClient.getIp(), newClient.getPort());
 										if (_onClientDisConnectEvent != NULL) {
 											_onClientDisConnectEvent(newClient);
 										}
@@ -1102,7 +1119,7 @@ namespace meet
 
 	private:
 		/**
-		 * @brief 从客户端列表中移除客户端信息
+		 * @brief 仅从客户端列表中移除客户端信息
 		 * @param addr 
 		 * @param port 
 		 * @return 是否有错误 [Error::noFoundClient] / [Error::noError]
@@ -1110,7 +1127,7 @@ namespace meet
 		Error removeClientFromClientList(IP addr, u_short port) {
 			
 			for (auto it = clientList.begin(); it != clientList.end(); it++) {
-				if ((*it).addr.toString() == addr.toString() && (*it).port == port) {		// 条件语句
+				if ((*it).getIp().toString() == addr.toString() && (*it).getPort() == port) {		// 条件语句
 					// disClientConnect 方法内部会调用这个函数
 					clientList.erase(it);		// 移除他
 					//it--;									// 让该迭代器指向前一个， 只删除一个没必要,而且会出现错误
@@ -1143,9 +1160,9 @@ namespace meet
 				return Error::serverNotStarted;
 			}
 			for (auto& c : clientList) {
-				if (addr.toString() == c.addr.toString() && port == c.port) {
-					shutdown(c.clientSocket, SD_BOTH);
-					if (closesocket(c.clientSocket) == 0) {
+				if (addr.toString() == c.getIp().toString() && port == c.getPort()) {
+					shutdown(c.getSocket(), SD_BOTH);
+					if (closesocket(c.getSocket()) == 0) {
 						removeClientFromClientList(addr, port);
 						//循环 
 						return Error::noError;
@@ -1157,7 +1174,7 @@ namespace meet
 		};
 
 		Error disClientConnect(MeetClient& client) {
-			return disClientConnect(client.addr, client.port);
+			return disClientConnect(client.getIp(), client.getPort());
 		}
 
 

@@ -49,19 +49,20 @@ void startServer(meet::TCPServer& s) {
 
     // 监听客户端断开连接的消息
     s.onClientDisConnect([&](meet::TCPServer::MeetClient meetClient) {
-        printf("\n[%s -:- %d][连接] 断开连接\n", meetClient.addr.toString().c_str(), meetClient.port);
+        //printf("\n[%s -:- %d][连接] 断开连接\n", meetClient.getIp().toString().c_str(), meetClient.getPort());
+        printf("\n[%s -:- %d][连接] 断开连接\n", meetClient.getIp().toString().c_str(), meetClient.getPort());
         system(std::format("title TCP Server / 服务端 [{}/{}]", s.GetALLClient().size(), s.getMaxConnectCount()).c_str());
         });
 
     // 监听客户端连接的消息
     s.onNewClientConnect([&](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/) {
-        printf("\n[%s -:- %d][连接] 连接成功\n", meetClient.addr.toString().c_str(), meetClient.port);
+        printf("\n[%s -:- %d][连接] 连接成功\n", meetClient.getIp().toString().c_str(), meetClient.getPort());
         system(std::format("title TCP Server / 服务端 [{}/{}]",s.GetALLClient().size(), s.getMaxConnectCount()).c_str());
         });
 
     // 当有数据到达时监听消息
     s.onRecvData([&](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/, ULONG64 len, const char* data) {
-        if (ServerWriteFile && ServerWriteFileIP == meetClient.addr.toString() && ServerWriteFilePort == meetClient.port) {
+        if (ServerWriteFile && ServerWriteFileIP == meetClient.getIp().toString() && ServerWriteFilePort == meetClient.getPort()) {
             ServerWriteFileIO.write(data, len);
             ServerWriteFileIO.flush();
         }
@@ -69,11 +70,11 @@ void startServer(meet::TCPServer& s) {
             // 检查是不是exit,则断开连接
             if (std::string(data) == "exit") {
                 meetClient.disConnect();
-                printf("\n[%s -:- %d][命令]: %s", meetClient.addr.toString().c_str(), meetClient.port, "断开连接命令");
+                printf("\n[%s -:- %d][命令]: %s", meetClient.getIp().toString().c_str(), meetClient.getPort(), "断开连接命令");
                 system(std::format("title TCP Server / 服务端 [{}/{}]", s.GetALLClient().size(), s.getMaxConnectCount()).c_str());
                 return;
             }
-            printf("\n[%s -:- %d][数据][%I64d字节]:", meetClient.addr.toString().c_str(), meetClient.port, len);
+            printf("\n[%s -:- %d][数据][%I64d字节]:", meetClient.getIp().toString().c_str(), meetClient.getPort(), len);
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 9);
             std::cout << std::string(data) << std::endl;
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
@@ -122,7 +123,7 @@ void startServer(meet::TCPServer& s) {
             size_t clientcount = clientList.size();
 
             for (INT64 i = clientcount - 1; i >= 0; i--) {
-                if (s.disClientConnect(clientList[i].addr, clientList[i].port) == meet::Error::noError) {
+                if (s.disClientConnect(clientList[i].getIp(), clientList[i].getPort()) == meet::Error::noError) {
                     discount++;
                 }
             }
@@ -142,7 +143,7 @@ void startServer(meet::TCPServer& s) {
 
                 std::cout << std::endl;
                 for (int i = 0; i < clientList.size(); i++) {
-                    std::cout << i << " ========== [" << clientList.at(i).addr.toString() << ":" << clientList.at(i).port << "]" << std::endl;
+                    std::cout << i << " ========== [" << clientList.at(i).getIp().toString() << ":" << clientList.at(i).getPort() << "]" << std::endl;
                 }
                 std::cout << clientList.size() << " ========== [返回上一页] " << std::endl;
                 std::cout << "请输入一个序号选择一个客户端:";
@@ -163,7 +164,7 @@ void startServer(meet::TCPServer& s) {
                     // 对选择的客户端进行操作
                     for (;;) {
                         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
-                        std::cout << "当前选择的客户端是:[" << client.addr.toString() << ":" << client.port << "]" << std::endl;
+                        std::cout << "当前选择的客户端是:[" << client.getIp().toString() << ":" << client.getPort() << "]" << std::endl;
                         std::cout << "0 ---- 断开这个客户端,并返回上一页" << std::endl;
                         std::cout << "1 ---- 返回上一页" << std::endl;
                         std::cout << "2 ---- 发送消息" << std::endl;
@@ -177,12 +178,12 @@ void startServer(meet::TCPServer& s) {
                         std::string sinput_setup;
                         std::getline(std::cin, sinput_setup);
 
-                        if (x >= clientList.size() || clientList.at(x).clientSocket != client.clientSocket) {
+                        if (x >= clientList.size() || clientList.at(x).getSocket() != client.getSocket()) {
                             std::cout << "该客户端的连接早已断开" << std::endl;
                             break;
                         }
                         if (sinput_setup == "0") {
-                            meet::Error err = s.disClientConnect(client.addr, client.port);
+                            meet::Error err = s.disClientConnect(client.getIp(), client.getPort());
                             if (err != meet::Error::noError) {
                                 std::cout << "客户端断开失败:" << meet::getString(err) << std::endl;
                             }
@@ -198,7 +199,7 @@ void startServer(meet::TCPServer& s) {
                             std::getline(std::cin, ssendtext);
 
                             meet::Error err;
-                            if ((err = s.sendText(client.clientSocket, ssendtext)) != meet::Error::noError) {
+                            if ((err = s.sendText(client.getSocket(), ssendtext)) != meet::Error::noError) {
                                 std::cout << "发送消息出现错误" << meet::getString(err) << std::endl;
                             }
                         }
@@ -225,7 +226,7 @@ void startServer(meet::TCPServer& s) {
                                 sf.read(tempStr, 1024);
                                 int readsize = static_cast<int>(sf.gcount());
 
-                                meet::Error sendFileErr = s.sendData(client.clientSocket, tempStr, readsize);
+                                meet::Error sendFileErr = s.sendData(client.getSocket(), tempStr, readsize);
                                 if (sendFileErr != meet::Error::noError) {
                                     std::cout << "发送文件发生错误:" << meet::getString(sendFileErr) << std::endl;
                                     break;
@@ -243,8 +244,8 @@ void startServer(meet::TCPServer& s) {
                             ServerWriteFileIO.open(ssavefile, std::ios::binary);
                             if (ServerWriteFileIO.is_open()) {
                                 ServerWriteFile = true;
-                                ServerWriteFileIP = client.addr.toString();
-                                ServerWriteFilePort = client.port;
+                                ServerWriteFileIP = client.getIp().toString();
+                                ServerWriteFilePort = client.getPort();
                                 std::cout << "开始接收文件" << std::endl;
                             }
                         }
