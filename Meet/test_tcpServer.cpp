@@ -49,19 +49,18 @@ void startServer(meet::TCPServer& s) {
 
     // 监听客户端断开连接的消息
     s.onClientDisConnect([&](meet::TCPServer::MeetClient meetClient) {
-        //printf("\n[%s -:- %d][连接] 断开连接\n", meetClient.getIp().toString().c_str(), meetClient.getPort());
         printf("\n[%s -:- %d][连接] 断开连接\n", meetClient.getIp().toString().c_str(), meetClient.getPort());
         system(std::format("title TCP Server / 服务端 [{}/{}]", s.GetALLClient().size(), s.getMaxConnectCount()).c_str());
         });
 
     // 监听客户端连接的消息
-    s.onNewClientConnect([&](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/) {
+    s.onNewClientConnect([&](meet::TCPServer::MeetClient meetClient) {
         printf("\n[%s -:- %d][连接] 连接成功\n", meetClient.getIp().toString().c_str(), meetClient.getPort());
         system(std::format("title TCP Server / 服务端 [{}/{}]",s.GetALLClient().size(), s.getMaxConnectCount()).c_str());
         });
 
     // 当有数据到达时监听消息
-    s.onRecvData([&](meet::TCPServer::MeetClient meetClient /*meet::IP ip, USHORT port, SOCKET socket*/, ULONG64 len, const char* data) {
+    s.onRecvData([&](meet::TCPServer::MeetClient meetClient, ULONG64 len, const char* data) {
         if (ServerWriteFile && ServerWriteFileIP == meetClient.getIp().toString() && ServerWriteFilePort == meetClient.getPort()) {
             ServerWriteFileIO.write(data, len);
             ServerWriteFileIO.flush();
