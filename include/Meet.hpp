@@ -395,6 +395,7 @@ namespace meet
 			if (this == &copy) {
 				return *this;
 			}
+			this->IPFamily = copy.IPFamily;
 			if (copy._valid) {
 				if (copy.IPFamily == Family::IPV4) {
 					this->InAddr = copy.InAddr;
@@ -919,7 +920,7 @@ namespace meet
 		 * @param address 监听地址比如 0.0.0.0 / 127.0.0.0 / ::
 		 * @return 是否有错误 [Error::serverIsStarted / Error::noError]
 		*/
-		Error setListenAddress(std::string address) {
+		Error setListenAddress(const std::string& address) {
 			if (_serverRunning) {
 				return Error::serverIsStarted;
 			}

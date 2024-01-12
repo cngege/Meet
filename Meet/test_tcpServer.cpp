@@ -129,7 +129,7 @@ void startServer(meet::TCPServer& s) {
             }
             std::cout << "共成功断开了 " << discount << "/" << clientcount << " 个客户端的连接" << std::endl;
             std::cout << "debug clientList size: " << clientList.size() << std::endl;
-            s.close();
+            //s.close();
             break;
         }
         else if (sinput == "1") {
@@ -232,7 +232,7 @@ void startServer(meet::TCPServer& s) {
                                     break;
                                 }
                             }
-                            sf.close();
+                            sf.close();// 关闭读取文件的文件句柄 
                         }
                         else if (sinput_setup == "4") {
 
