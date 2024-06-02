@@ -21,7 +21,9 @@ void startServer(meet::TCPServer& s) {
     std::string fa_input;
     std::getline(std::cin, fa_input);
     if (fa_input == "" || fa_input == "0") {
-        std::cout << "将使用默认项(0.0.0.0 : 3000  maxconnect 5)" << std::endl;
+        std::cout << "将使用默认项(0.0.0.0 : 3000  maxconnect 5 阻塞模式)" << std::endl;
+        // 设置为阻塞模式
+        s.setBlockingMode(true);
     }
     else {
         if (fa_input == "6") {
@@ -42,10 +44,12 @@ void startServer(meet::TCPServer& s) {
         std::getline(std::cin, count_input);
         auto count = atoi(count_input.c_str());
         maxconn = count;
-    }
 
-    // 设置为阻塞模式
-    s.setBlockingMode(true);
+        std::cout << "是否使用阻塞模式(y/n):";
+        std::string block_input;
+        std::getline(std::cin, block_input);
+        s.setBlockingMode(block_input == "y");
+    }
 
     // 监听客户端断开连接的消息
     s.onClientDisConnect([&](meet::TCPServer::MeetClient meetClient) {
@@ -186,6 +190,8 @@ void startServer(meet::TCPServer& s) {
                             if (err != meet::Error::noError) {
                                 std::cout << "客户端断开失败:" << meet::getString(err) << std::endl;
                             }
+                            // 非阻塞模式不是实时断开
+                            system(std::format("title TCP Server / 服务端 [{}/{}]", s.GetALLClient().size(), s.getMaxConnectCount()).c_str());
                             //s.Close();
                             break;
                         }

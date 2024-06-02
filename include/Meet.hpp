@@ -812,6 +812,7 @@ namespace meet
 			IP _addr;
 			u_short _port;
 			TCPServer* _server;
+			bool _waitDisconnect = false;
 		public:
 			MeetClient(TCPServer* ser, SOCKET socket, IP address, u_short port) : _server(ser){
 				_clientSocket = socket;
@@ -840,6 +841,20 @@ namespace meet
 				return _port;
 			}
 
+			/**
+			 * @brief 是否要在循环线程中移除这个客户端
+			*/
+			bool hasDisconnectTag() {
+				return _waitDisconnect;
+			}
+
+			/**
+			 * @brief 设置标志 在循环线程中移除此客户端
+			*/
+			void setDisconnectTag() {
+				_waitDisconnect = true;
+			}
+
 			bool operator==(const MeetClient& c) const {
 				return this->_server == c._server && this->_addr == c._addr && this->_port == c._port;
 			}
@@ -848,6 +863,7 @@ namespace meet
 			 * @brief 断开这个客户端的连接
 			*/
 			Error disConnect() {
+				_waitDisconnect = true;
 				return _server->disClientConnect(_addr, _port);
 			}
 
@@ -890,6 +906,9 @@ namespace meet
 				closesocket(_socket);
 				WSACleanup();
 				_socket = NULL;
+			}
+			if (_data_buffer) {
+				delete[] _data_buffer;
 			}
 		}
 	public:
@@ -1011,15 +1030,21 @@ namespace meet
 
 			_serverRunning = true;
 
-			if (!_blockingMode) {
+			_data_buffer = new char[_recvBuffSize];
+			memset(_data_buffer, '\0', _recvBuffSize);
+
+			if (!_blockingMode) {	// 非阻塞模式
 				u_long iMode = 1;
 				::ioctlsocket(_socket, FIONBIO, &iMode);
 			}
 
+
 			//创建一个线程 接收客户端的连接
 			auto _connect_thread = std::thread([this]() {
 				while (_serverRunning) {
-
+					if (!_blockingMode) {	// 非阻塞模式 在此循环中接收 处理消息
+						recvAllClickData();
+					}
 					SOCKET c_socket;
 					IP clientAddress;
 					u_short clientPort = 0;
@@ -1038,14 +1063,22 @@ namespace meet
 						MeetClient newClient(this, c_socket, clientAddress, clientPort);
 						clientList.push_back(newClient);
 
+						//触发有客户端连接的回调
+						if (_onNewClientConnectEvent != NULL) {
+							_onNewClientConnectEvent(newClient);
+						}
+
+						if (!_blockingMode) {	// 在非阻塞模式下 由一个统一的线程统一接收所有客户端的数据， 后面是阻塞模式要处理的代码
+							continue;
+						}
+
 						//创建线程 监听客户端传来的消息
 						auto _recv_thread = std::thread([this, newClient]() {
-
-							char* buffer = new char[_recvBuffSize];
-							memset(buffer, '\0', _recvBuffSize);
+							//char* buffer = new char[_recvBuffSize];
+							//memset(buffer, '\0', _recvBuffSize);
 							while (_serverRunning) {
 								int recvbytecount;
-								if ((recvbytecount = ::recv(newClient.getSocket(), buffer, _recvBuffSize - 1, 0)) <= 0) {
+								if ((recvbytecount = ::recv(newClient.getSocket(), _data_buffer, _recvBuffSize - 1, 0)) <= 0) {
 									//Return 0 Network Outage
 									if (recvbytecount == 0) {
 										removeClientFromClientList(newClient.getIp(), newClient.getPort());
@@ -1069,19 +1102,16 @@ namespace meet
 								//接收数据 触发回调
 								else {
 									if (_recvDataEvent != NULL) {
-										buffer[recvbytecount] = '\0';
-										_recvDataEvent(newClient, recvbytecount, buffer);
+										_data_buffer[recvbytecount] = '\0';
+										_recvDataEvent(newClient, recvbytecount, _data_buffer);
 									}
 								}
 							}
-							delete[] buffer;
+							//delete[] buffer;
 							});
 						_recv_thread.detach();
 
-						//触发有客户端连接的回调
-						if (_onNewClientConnectEvent != NULL) {
-							_onNewClientConnectEvent(newClient);
-						}
+
 
 					}
 					else {
@@ -1093,6 +1123,42 @@ namespace meet
 				});
 			_connect_thread.detach();
 			return Error::noError;
+		}
+	private:
+
+		/**
+		 * @brief 在非阻塞模式下 处理接收远程客户端消息
+		*/
+		void recvAllClickData() {
+			// 轮询所有客户端 接收数据
+			for (auto it = clientList.begin(); it != clientList.end();) {
+				if ((*it).hasDisconnectTag()) {
+					it = clientList.erase(it);
+					continue;
+				}
+				int recvbytecount;
+				if ((recvbytecount = ::recv((*it).getSocket(), _data_buffer, _recvBuffSize - 1, 0)) <= 0) {
+					//Return 0 Network Outage
+					if (recvbytecount == 0) {
+						MeetClient& c = *it;
+						it = clientList.erase(it);
+						if (_onClientDisConnectEvent != NULL) {
+							_onClientDisConnectEvent(c);
+						}
+						continue;
+					}
+
+				}//if ((recvbytecount = recv(c->sockfd, _data_buffer, sizeof(_data_buffer), 0)) <= 0)
+
+				//接收数据 触发回调
+				else {
+					if (_recvDataEvent != NULL) {
+						_data_buffer[recvbytecount] = '\0';
+						_recvDataEvent((*it), recvbytecount, _data_buffer);
+					}
+				}
+				++it;
+			}
 		}
 
 	public:
@@ -1120,7 +1186,7 @@ namespace meet
 
 	private:
 		/**
-		 * @brief 仅从客户端列表中移除客户端信息
+		 * @brief 仅从客户端列表中移除客户端信息//注意线程安全
 		 * @param addr 
 		 * @param port 
 		 * @return 是否有错误 [Error::noFoundClient] / [Error::noError]
@@ -1164,7 +1230,12 @@ namespace meet
 				if (addr.toString() == c.getIp().toString() && port == c.getPort()) {
 					shutdown(c.getSocket(), SD_BOTH);
 					if (closesocket(c.getSocket()) == 0) {
-						removeClientFromClientList(addr, port);
+						if (_blockingMode) {
+							removeClientFromClientList(addr, port);
+						}
+						else {
+							c.setDisconnectTag();
+						}
 						//循环 
 						return Error::noError;
 					}
@@ -1291,6 +1362,11 @@ namespace meet
 		 * @brief 接收数据的数据缓冲区大小
 		*/
 		int _recvBuffSize = 1024;
+
+		/**
+		 * @brief 接收并处理数据的缓冲区
+		*/
+		char* _data_buffer = nullptr;
 
 		WSADATA _wsaDat{};
 		u_short _versionRequested = MAKEWORD(2, 2);
