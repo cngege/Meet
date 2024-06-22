@@ -121,7 +121,7 @@ void startServer(meet::TCPServer& s) {
         std::getline(std::cin, sinput);
 
         if (sinput == "0") {
-            auto& clientList = s.GetALLClient();
+            auto clientList = s.GetALLClient();
             int discount = 0;
             size_t clientcount = clientList.size();
 
@@ -131,14 +131,14 @@ void startServer(meet::TCPServer& s) {
                 }
             }
             std::cout << "共成功断开了 " << discount << "/" << clientcount << " 个客户端的连接" << std::endl;
-            std::cout << "debug clientList size: " << clientList.size() << std::endl;
+            std::cout << "debug clientList size: " << s.GetALLClient().size() << std::endl;
             //s.close();
             break;
         }
         else if (sinput == "1") {
             for (;;) {
                 int a = 0;
-                auto& clientList = s.GetALLClient();
+                auto clientList = s.GetALLClient();
                 if (clientList.size() == 0) {
                     std::cout << "当前没有客户端连接" << std::endl;
                     break;
@@ -153,6 +153,7 @@ void startServer(meet::TCPServer& s) {
                 std::string sinput_client;
                 std::getline(std::cin, sinput_client);
 
+                clientList = s.GetALLClient();
                 int x = atoi(sinput_client.c_str());
                 if (x == 0 && sinput_client != "0") {
                     system("cls");
@@ -181,6 +182,7 @@ void startServer(meet::TCPServer& s) {
                         std::string sinput_setup;
                         std::getline(std::cin, sinput_setup);
 
+                        clientList = s.GetALLClient();
                         if (x >= clientList.size() || clientList.at(x).getSocket() != client.getSocket()) {
                             std::cout << "该客户端的连接早已断开" << std::endl;
                             break;

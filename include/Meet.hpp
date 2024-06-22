@@ -3,6 +3,7 @@
 #include <string>
 #include <thread>
 #include <functional>
+#include <shared_mutex>	// 读写锁
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -284,7 +285,7 @@ namespace meet
 		 * @param port 端口,非必须
 		 * @return 
 		*/
-		sockaddr* toSockaddr(sockaddr* saddr, u_short port = 0) {
+		/*sockaddr* toSockaddr(sockaddr* saddr, u_short port = 0) {
 			if (_valid) {
 				saddr->sa_family = (ADDRESS_FAMILY)Family::IPV4;
 				if (isIPv4()) {
@@ -295,6 +296,7 @@ namespace meet
 					}
 				}
 				else if(isIPv6()) {
+					// 如果变量的实际类型是sockaddr,而isIPv6() 为true 则这里会出大问题，因为sockaddr的大小不够容纳
 					((sockaddr_in6*)saddr)->sin6_family = (ADDRESS_FAMILY)Family::IPV6;
 					((sockaddr_in6*)saddr)->sin6_addr = InAddr6;
 					if (port != 0) {
@@ -303,6 +305,33 @@ namespace meet
 				}
 			}
 			return saddr;
+		}*/
+
+		std::shared_ptr<sockaddr_storage> toSockaddr(u_short port = 0) {
+			if (_valid) {
+				//saddr->sa_family = (ADDRESS_FAMILY)Family::IPV4;
+				if (isIPv4()) {
+					//std::shared_ptr<SOCKADDR_IN> saddr = std::make_shared<SOCKADDR_IN>();
+					SOCKADDR_IN* saddr = new SOCKADDR_IN;
+					saddr->sin_family = (ADDRESS_FAMILY)Family::IPV4;
+					saddr->sin_addr = InAddr;
+					if (port != 0) {
+						saddr->sin_port = htons(port);
+					}
+					return std::shared_ptr<sockaddr_storage>((sockaddr_storage*)saddr);
+				}
+				else if (isIPv6()) {
+					//std::shared_ptr<SOCKADDR_IN6> saddr = std::make_shared<SOCKADDR_IN6>();
+					SOCKADDR_IN6* saddr = new SOCKADDR_IN6;
+					saddr->sin6_family = (ADDRESS_FAMILY)Family::IPV6;
+					saddr->sin6_addr = InAddr6;
+					if (port != 0) {
+						saddr->sin6_port = htons(port);
+					}
+					return std::shared_ptr<sockaddr_storage>((sockaddr_storage*)saddr);
+				}
+			}
+			return NULL;
 		}
 
 		sockaddr_storage* toSockaddr(sockaddr_storage* saddr, u_short port = 0) {
@@ -572,7 +601,7 @@ namespace meet
 			//sockaddr_in6 saddr{};
 			// 这里使用 sockaddr_storage 而不是使用 sockaddr ，因为前者的结构大小足够容纳IPv4 和 IPv6
 			sockaddr_storage saddr{};
-			if (::connect(_sockfd, ip.toSockaddr((sockaddr*)&saddr, port), ip.toSockaddrLen()) == INVALID_SOCKET) {
+			if (::connect(_sockfd, (sockaddr*)ip.toSockaddr(&saddr, port), ip.toSockaddrLen()) == INVALID_SOCKET) {
 				closesocket(_sockfd);
 				return Error::connectFailed;
 			}
@@ -1058,11 +1087,20 @@ namespace meet
 					clientAddress = IP(&remoteAddr);
 					clientPort = ntohs((remoteAddr.ss_family == (ADDRESS_FAMILY)Family::IPV4)? ((sockaddr_in*)&remoteAddr)->sin_port : ((sockaddr_in6*)&remoteAddr)->sin6_port);
 
-					if (clientList.size() < _maxCount || _maxCount < 0) {
+					size_t clientCount = 0;
+					{
+						std::shared_lock<std::shared_mutex> lock(rw_mtx_clientList);
+						clientCount = clientList.size();
+					}
+
+					if (clientCount < _maxCount || _maxCount < 0) {
 
 						MeetClient newClient(this, c_socket, clientAddress, clientPort);
-						clientList.push_back(newClient);
-
+						{
+							std::unique_lock<std::shared_mutex> lock(rw_mtx_clientList);
+							clientList.push_back(newClient);
+						}
+						
 						//触发有客户端连接的回调
 						if (_onNewClientConnectEvent != NULL) {
 							_onNewClientConnectEvent(newClient);
@@ -1074,13 +1112,12 @@ namespace meet
 
 						//创建线程 监听客户端传来的消息
 						auto _recv_thread = std::thread([this, newClient]() {
-							//char* buffer = new char[_recvBuffSize];
-							//memset(buffer, '\0', _recvBuffSize);
 							while (_serverRunning) {
 								int recvbytecount;
 								if ((recvbytecount = ::recv(newClient.getSocket(), _data_buffer, _recvBuffSize - 1, 0)) <= 0) {
 									//Return 0 Network Outage
 									if (recvbytecount == 0) {
+										std::unique_lock<std::shared_mutex> lock(rw_mtx_clientList);
 										removeClientFromClientList(newClient.getIp(), newClient.getPort());
 										if (_onClientDisConnectEvent != NULL) {
 											_onClientDisConnectEvent(newClient);
@@ -1131,17 +1168,23 @@ namespace meet
 		*/
 		void recvAllClickData() {
 			// 轮询所有客户端 接收数据
+			std::shared_lock<std::shared_mutex> lock(rw_mtx_clientList);
 			for (auto it = clientList.begin(); it != clientList.end();) {
-				if ((*it).hasDisconnectTag()) {
-					it = clientList.erase(it);
-					continue;
-				}
+				//if ((*it).hasDisconnectTag()) {
+				//	it = clientList.erase(it);
+				//	continue;
+				//}
 				int recvbytecount;
 				if ((recvbytecount = ::recv((*it).getSocket(), _data_buffer, _recvBuffSize - 1, 0)) <= 0) {
 					//Return 0 Network Outage
 					if (recvbytecount == 0) {
 						MeetClient& c = *it;
-						it = clientList.erase(it);
+						{
+							lock.unlock();
+							std::unique_lock<std::shared_mutex> lock(rw_mtx_clientList);
+							it = clientList.erase(it);
+						}
+						lock.lock();
 						if (_onClientDisConnectEvent != NULL) {
 							_onClientDisConnectEvent(c);
 						}
@@ -1192,7 +1235,6 @@ namespace meet
 		 * @return 是否有错误 [Error::noFoundClient] / [Error::noError]
 		*/
 		Error removeClientFromClientList(IP addr, u_short port) {
-			
 			for (auto it = clientList.begin(); it != clientList.end(); it++) {
 				if ((*it).getIp().toString() == addr.toString() && (*it).getPort() == port) {		// 条件语句
 					// disClientConnect 方法内部会调用这个函数
@@ -1226,15 +1268,23 @@ namespace meet
 			if (!_serverRunning) {
 				return Error::serverNotStarted;
 			}
+			std::shared_lock<std::shared_mutex> lock(rw_mtx_clientList);
 			for (auto& c : clientList) {
 				if (addr.toString() == c.getIp().toString() && port == c.getPort()) {
 					shutdown(c.getSocket(), SD_BOTH);
 					if (closesocket(c.getSocket()) == 0) {
-						if (_blockingMode) {
+						//if (_blockingMode) {
+						//	lock.unlock();
+						//	std::unique_lock<std::shared_mutex> uniquelock(rw_mtx_clientList);
+						//	removeClientFromClientList(addr, port);
+						//}
+						//else {
+						//	c.setDisconnectTag();
+						//}
+						{
+							lock.unlock();
+							std::unique_lock<std::shared_mutex> uniquelock(rw_mtx_clientList);
 							removeClientFromClientList(addr, port);
-						}
-						else {
-							c.setDisconnectTag();
 						}
 						//循环 
 						return Error::noError;
@@ -1337,10 +1387,11 @@ namespace meet
 		};
 
 		/**
-		 * @brief 获取所有已连接的客户端
+		 * @brief 获取所有已连接的客户端， 不允许在外部修改容器，所以不返回引用
 		 * @return 客户端列表
 		*/
-		std::vector<MeetClient>& GetALLClient() {
+		std::vector<MeetClient> GetALLClient() {
+			std::shared_lock<std::shared_mutex> lock(rw_mtx_clientList);
 			return clientList;
 		}
 
@@ -1394,6 +1445,11 @@ namespace meet
 		 * @brief 标志，防止重复初始化， 服务端是否启动
 		*/
 		bool _serverRunning = false;
+
+		/**
+		 * @brief 争对客户端列表的读写锁（可有多个线程拥有读锁，但仅能有一个线程拥有写锁）
+		*/
+		std::shared_mutex rw_mtx_clientList;
 
 		// 回调
 		NewClientConnectEvent _onNewClientConnectEvent = NULL;
@@ -1545,22 +1601,23 @@ namespace meet
 			if (!ip.isValid()) {
 				return Error::ipInvalid;
 			}
-			SOCKADDR_IN sendAddr4{};
-			SOCKADDR_IN6 sendAddr6{};
+			//SOCKADDR_IN sendAddr4{};
+			//SOCKADDR_IN6 sendAddr6{};
 			int ret;
+			auto toShrPtr = ip.toSockaddr(port);
+			auto to = (sockaddr*)toShrPtr.get();
+			
 			if (ip.IPFamily == Family::IPV4) {
 				if (!supportipv4) {
 					return Error::unFamily;				// 没有写支持这个地址协议
 				}
-				//ip.toSockaddr((sockaddr*)&sendAddr4, port);
-				ret = sendto(_sockfd4, data, len, 0, ip.toSockaddr((sockaddr*)&sendAddr4, port), ip.toSockaddrLen());
+				ret = sendto(_sockfd4, data, len, 0, to, ip.toSockaddrLen());
 			}
 			else {
 				if (!supportipv6) {
 					return Error::unFamily;				// 没有写支持这个地址协议
 				}
-				//ip.toSockaddr((sockaddr*)&sendAddr6, port);
-				ret = sendto(_sockfd6, data, len, 0, ip.toSockaddr((sockaddr*)&sendAddr6, port), ip.toSockaddrLen());
+				ret = sendto(_sockfd6, data, len, 0, to, ip.toSockaddrLen());
 			}
 			if (ret == SOCKET_ERROR) {
 				// 发送错误,应该关闭套接字
@@ -1813,8 +1870,8 @@ namespace meet
 				::ioctlsocket(_sockfd, FIONBIO, &iMode);
 			}
 
-			//sockaddr_storage sockAddr{};
-			sockaddr sockAddr{};
+			sockaddr_storage sockAddr{};
+			//sockaddr sockAddr{};
 			memset(&sockAddr, '\0', sizeof(sockAddr));
 			ip.toSockaddr(&sockAddr, port);
 			if (::bind(_sockfd, (sockaddr*)&sockAddr, ip.toSockaddrLen()) == SOCKET_ERROR) {
