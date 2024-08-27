@@ -1,4 +1,8 @@
-﻿#pragma once
+﻿#ifndef MEETLIB
+#define MEETLIB
+
+
+#pragma once
 
 #include <string>
 #include <thread>
@@ -7,7 +11,10 @@
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
+
+#ifndef EXTERNAL_LINKWS2_32LIB
 #pragma comment(lib,"ws2_32.lib")
+#endif // !EXTERNAL_LINKWS2_32LIB
 
 // 表示在建立握手时队列最多可等待的连接数
 #ifndef MEET_LISTEN_BACKLOG
@@ -1971,3 +1978,6 @@ namespace meet
 #pragma endregion
 
 }//namespace meet
+
+
+#endif // !MEETLIB

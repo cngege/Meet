@@ -109,3 +109,11 @@ auto all = s.GetALLClient();
 Error disClientConnect(IP addr,ushort port)
 
 ```
+
+- 链接库  
+如果ws2_32.lib 库的链接由外部处理，需要屏蔽meet中关于此库的链接部分  
+则需要在引用meet.hpp前 定义`EXTERNAL_LINKWS2_32LIB`宏：  
+```cpp
+#define EXTERNAL_LINKWS2_32LIB
+#include "Meet.hpp"
+```
