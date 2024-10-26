@@ -32,7 +32,8 @@
 *.app
 
 /x64
-/.vs
-/Meet/x64/Debug
 /build
-/Meet/x64/Release
+/.vs
+/out
+/Meet/x64/
+
