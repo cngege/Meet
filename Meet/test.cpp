@@ -15,7 +15,7 @@
 */
 
 //#include "../include/meet"
-#include "../include/Meet.hpp"
+#include "../include/meet/Meet.hpp"
 
 #include <iostream>
 #include <fstream>

@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <iostream>
 
-#include "../include/Meet.hpp"
+#include "../include/meet/Meet.hpp"
 
 
 bool setUplisten(meet::UDPServer& us) {
