@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "../include/Meet.hpp"
 #include <iostream>
 
@@ -13,7 +13,7 @@ void StartUDPServerToMCBEServer(meet::IP remoteIp, u_short remotePort) {
 
 
 
-	// ·şÎñ¶ËÊı¾İ½ÓÊÕ À´×Ô±¾µØµÄÊı¾İ
+	// æœåŠ¡ç«¯æ•°æ®æ¥æ”¶ æ¥è‡ªæœ¬åœ°çš„æ•°æ®
 	us.OnRecvData([&](UINT64 len, const char* data, meet::IP ip, u_short port) {
 		//if (localPort == 0) {
 			localIp = ip;
@@ -22,17 +22,17 @@ void StartUDPServerToMCBEServer(meet::IP remoteIp, u_short remotePort) {
 		if (localIp == ip && localPort == port) {
 			meet::Error err = uc.sendData(remoteIp, remotePort, data, static_cast<int>(len));
 			if ((int)err) {
-				std::cout << "±¾µØ·¢ËÍÔ¶¶Ë´íÎó: " << meet::getString(err) << std::endl;
+				std::cout << "æœ¬åœ°å‘é€è¿œç«¯é”™è¯¯: " << meet::getString(err) << std::endl;
 			}
 		}
 		});
 
-	//¿Í»§¶ËÊı¾İ½ÓÊÕ À´×ÔÔ¶¶ËµÄÊı¾İ
+	//å®¢æˆ·ç«¯æ•°æ®æ¥æ”¶ æ¥è‡ªè¿œç«¯çš„æ•°æ®
 	uc.OnRecvData([&](UINT64 len, const char* data, meet::IP ip, u_short port) {
 		if (localPort != 0) {
-			meet::Error err = us.sendData(localIp, localPort, data, static_cast<int>(len));	   // ÕâÀïºóÃæÒª×ö·Ö½â ¼æÈİUINT64 ¶ø²»ÊÇÇ¿×ª
+			meet::Error err = us.sendData(localIp, localPort, data, static_cast<int>(len));	   // è¿™é‡Œåé¢è¦åšåˆ†è§£ å…¼å®¹UINT64 è€Œä¸æ˜¯å¼ºè½¬
 			if ((int)err) {
-				std::cout << "Ô¶¶Ë·¢ËÍ±¾µØ´íÎó: " << meet::getString(err) << std::endl;
+				std::cout << "è¿œç«¯å‘é€æœ¬åœ°é”™è¯¯: " << meet::getString(err) << std::endl;
 			}
 		}
 		});
@@ -50,7 +50,7 @@ void StartUDPServerToMCBEServer(meet::IP remoteIp, u_short remotePort) {
 		std::cout << "ucinitErr: " << meet::getString(ucinitErr) << std::endl;
 	}
 
-	std::cout << " ÊäÈëÈÎÒâ°´¼ü Í£Ö¹´úÀí. " << std::endl;
+	std::cout << " è¾“å…¥ä»»æ„æŒ‰é”® åœæ­¢ä»£ç†. " << std::endl;
 	std::ignore = getchar();
 	uc.close();
 	us.close();

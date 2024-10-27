@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <vector>
 #include <string>
 #include <thread>
 #include <functional>
@@ -677,7 +678,7 @@ namespace meet
 				return Error::dataTooLong;		// 长度不能超过Int的最大值
 			}
 			int len = static_cast<int>(textlen);
-			char* p = text.data();
+			char* p = const_cast<char*>(text.data());
 			while (len > 0) {
 				int sendcount = ::send(_sockfd, p, len, 0);
 				if (sendcount < 0) {
@@ -1356,7 +1357,7 @@ namespace meet
 				return Error::dataTooLong;		// 长度不能超过Int的最大值
 			}
 			int len = static_cast<int>(textlen);
-			char* p = text.data();
+			char* p = const_cast<char*>(text.data());
 			while (len > 0) {
 				int sendcount = send(socket, p, len, 0);
 				if (sendcount < 0) {
