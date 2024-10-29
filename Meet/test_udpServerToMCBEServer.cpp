@@ -24,16 +24,28 @@ void StartUDPServerToMCBEServer(meet::IP remoteIp, u_short remotePort) {
 			if ((int)err) {
 				std::cout << "本地发送远端错误: " << meet::getString(err) << std::endl;
 			}
+			std::cout << "[本地->服务器]: ";
+			for(int i = 0; i < len; i++) {
+				printf_s("%c", data[i]);
+			}
+			std::cout << std::endl;
 		}
 		});
 
 	//客户端数据接收 来自远端的数据
 	uc.OnRecvData([&](UINT64 len, const char* data, meet::IP ip, u_short port) {
 		if (localPort != 0) {
+
 			meet::Error err = us.sendData(localIp, localPort, data, static_cast<int>(len));	   // 这里后面要做分解 兼容UINT64 而不是强转
 			if ((int)err) {
 				std::cout << "远端发送本地错误: " << meet::getString(err) << std::endl;
 			}
+			std::cout << "[服务器->本地]: ";
+			printf_s("(%d)", reinterpret_cast<const UCHAR*>(data)[0]);
+			for(int i = 0; i < len; i++) {
+				printf_s("%c", data[i]);
+			}
+			std::cout << std::endl;
 		}
 		});
 

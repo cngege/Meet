@@ -77,7 +77,7 @@ int main() {
         }
         else if (userinput == "5") {
             system("title UDP Server数据转发toMC");           // 已证实 A通过出口Socket A' 连接B， C就可以通过发送数据到A' 而连接A
-            StartUDPServerToMCBEServer("hivebedrock.network", 19132);
+            StartUDPServerToMCBEServer("mcpock.9666.fun", 22141);
         }
         else if (userinput == "6") {
             system("title TCP压测");
