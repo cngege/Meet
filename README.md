@@ -117,3 +117,21 @@ Error disClientConnect(IP addr,ushort port)
 #define EXTERNAL_LINKWS2_32LIB
 #include "Meet.hpp"
 ```
+
+### 🪭使用🪭
+
+- xmake
+
+```lua
+-- 示例
+add_rules("mode.debug", "mode.release")
+add_requires("meet v0.1.2")  -- Import the library meet
+target("x")
+    add_ldflags("-Wl,-exec-charset=UTF-8")
+    -- set kind
+    set_kind("binary")
+	add_packages("meet")  -- Use the library meet
+	set_languages("cxx20")
+    -- add files
+    add_files("main.cpp")
+```
