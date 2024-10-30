@@ -154,7 +154,7 @@
     <ClCompile Include="test_udpServerToMCBEServer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\Meet.hpp" />
+    <ClInclude Include="..\include\meet\Meet.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

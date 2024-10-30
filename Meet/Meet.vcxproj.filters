@@ -34,7 +34,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\Meet.hpp">
+    <ClInclude Include="..\include\meet\Meet.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

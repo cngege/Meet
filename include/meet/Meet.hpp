@@ -60,7 +60,6 @@ namespace meet
 		connecting,
 		noConnected,
 		changeError,
-		theMaximumNumberOfConnectionsHasBeenReached,
 		theClientIsDisconnected,
 		serverIsStarted = 100,
 		serverNotStarted = 101,
@@ -69,111 +68,36 @@ namespace meet
 	};//enum class Error
 
 	static std::string getString(Error errorCode) {
-		switch (errorCode) {
-		case Error::initializationWinsockFailed:
-		{
-			return "initializationWinsockFailed";
-		}
-		case Error::unkError:
-		{
-			return "unkError";
-		}
-		case Error::noError:
-		{
-			return "noError";
-		}
-		case Error::uninitialized:
-		{
-			return "uninitialized";
-		}
-		case Error::inited:
-		{
-			return "inited";
-		}
-		case Error::ipInvalid:
-		{
-			return "ipInvalid";
-		}
-		case Error::unFamily:
-		{
-			return "unFamily";
-		}
-		case Error::socketError:
-		{
-			return "socketError";
-		}
-		case Error::bindError:
-		{
-			return "bindError";
-		}
-		case Error::listenError:
-		{
-			return "listenError";
-		}
-		case Error::acceptError:
-		{
-			return "acceptError";
-		}
-		case Error::sendFailed:
-		{
-			return "sendFailed";
-		}
-		case Error::recvFailed:
-		{
-			return "recvFailed";
-		}
-		case Error::portTooSmall:
-		{
-			return "portTooSmall";
-		}
-		case Error::maxcouTooBig:
-		{
-			return "maxcouTooBig";
-		}
-		case Error::connectFailed:
-		{
-			return "connectFailed";
-		}
-		case Error::unsupportedOperations:
-		{
-			return "unsupportedOperations";
-		}
-		case Error::connecting:
-		{
-			return "connecting";
-		}
-		case Error::noConnected:
-		{
-			return "noConnected";
-		}
-		case Error::changeError:
-		{
-			return "changeError";
-		}
-		case Error::theMaximumNumberOfConnectionsHasBeenReached:
-		{
-			return "theMaximumNumberOfConnectionsHasBeenReached";
-		}
-		case Error::serverIsStarted:
-		{
-			return "serverIsStarted";
-		}
-		case Error::serverNotStarted:
-		{
-			return "serverNotStarted";
-		}
-		case Error::noFoundClient:
-		{
-			return "noFoundClient";
-		}
-		case Error::dataTooLong:
-		{
-			return "dataTooLong";
-		}
-		default:
-		{
-			return "Error! unk errorCode!";
-		}
+	#define MEET_ST2STR(x)    \
+		case x:             \
+			return #x;
+        switch (errorCode) {
+			MEET_ST2STR(Error::initializationWinsockFailed)
+			MEET_ST2STR(Error::unkError)
+			MEET_ST2STR(Error::noError)
+			MEET_ST2STR(Error::uninitialized)
+			MEET_ST2STR(Error::inited)
+			MEET_ST2STR(Error::ipInvalid)
+			MEET_ST2STR(Error::unFamily)
+			MEET_ST2STR(Error::socketError)
+			MEET_ST2STR(Error::bindError)
+			MEET_ST2STR(Error::listenError)
+			MEET_ST2STR(Error::acceptError)
+			MEET_ST2STR(Error::sendFailed)
+			MEET_ST2STR(Error::recvFailed)
+			MEET_ST2STR(Error::portTooSmall)
+			MEET_ST2STR(Error::maxcouTooBig)
+			MEET_ST2STR(Error::connectFailed)
+			MEET_ST2STR(Error::unsupportedOperations)
+			MEET_ST2STR(Error::connecting)
+			MEET_ST2STR(Error::noConnected)
+			MEET_ST2STR(Error::changeError)
+			MEET_ST2STR(Error::serverIsStarted)
+			MEET_ST2STR(Error::serverNotStarted)
+			MEET_ST2STR(Error::noFoundClient)
+			MEET_ST2STR(Error::dataTooLong)
+		#undef MEET_ST2STR
+				return "(unknown)";
 		}
 	}//static std::string getString(Error errorCode)
 
