@@ -97,8 +97,8 @@ namespace meet
             MEET_ST2STR(Error::noFoundClient)
             MEET_ST2STR(Error::dataTooLong)
         #undef MEET_ST2STR
-                return "(unknown)";
         }
+        return "(unknown)";
     }//static std::string getString(Error errorCode)
 
 #pragma region IP
