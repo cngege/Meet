@@ -149,8 +149,8 @@ void startClient(meet::TCPClient& c) {
                 char* tempStr = new char[1024];
                 sf.read(tempStr, 1024);
                 int readsize = static_cast<int>(sf.gcount());
-
-                meet::Error sendFileErr = c.sendData(tempStr, readsize);
+                std::vector<uint8_t> send_data(tempStr, tempStr + readsize);
+                meet::Error sendFileErr = c.sendData(send_data);
                 delete[] tempStr;
                 if (sendFileErr != meet::Error::noError) {
                     std::cout << "发送文件发生错误:" << meet::getString(sendFileErr) << std::endl;
