@@ -525,8 +525,8 @@ namespace meet
             }
 
             ///Open a thread Triggers a listening event after receiving and processing a message
-            _recv_thread = std::thread(&TCPClient::startRecv, this);
-            _recv_thread.detach();
+            //_recv_thread = std::thread(&TCPClient::startRecv, this);
+            //_recv_thread.detach();
             return Error::noError;
         };
 
@@ -670,6 +670,14 @@ namespace meet
             _recvDataEvent = recvDataEvent;
         }
 
+        void onRecvData(RecvDataBEvent recvDataEvent) {
+            _recvDataBEvent = recvDataEvent;
+        }
+
+        void onRecvData(RecvDataCEvent recvDataEvent) {
+            _recvDataCEvent = recvDataEvent;
+        }
+
         /**
          * @brief 注册回调事件 / Register callback events
          * @param recvErrorEvent
@@ -724,6 +732,20 @@ namespace meet
                 delete[] buffer;
             }//if(!connected)
         };//void startRecv()
+                    if (_recvDataEvent != NULL) {
+                        buffer[recvbytecount] = '\0';
+                        _recvDataEvent(recvbytecount, buffer);
+                    }
+                    if (_recvDataBEvent != NULL) {
+                        buffer[recvbytecount] = '\0';
+                        std::string str = std::string(buffer, recvbytecount);
+                        _recvDataBEvent(str);
+                    }
+                    if (_recvDataCEvent != NULL) {
+                        buffer[recvbytecount] = '\0';
+                        std::vector<uint8_t> vec = std::vector<uint8_t>(buffer, buffer + recvbytecount);
+                        _recvDataCEvent(vec);
+                    }
 
     public:
 
@@ -750,6 +772,8 @@ namespace meet
          * @brief 有数据达到时自动触发的事件
         */
         RecvDataEvent _recvDataEvent = NULL;
+        RecvDataBEvent _recvDataBEvent = NULL;
+        RecvDataCEvent _recvDataCEvent = NULL;
 
         /**
          * @brief recv线程接收消息时出错触发事件
