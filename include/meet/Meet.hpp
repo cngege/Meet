@@ -599,12 +599,29 @@ namespace meet
          * @param size 数据长度
          * @return 是否有错误 [Error::noConnected] / [Error::noError] / [Error::sendFailed]
         */
-        Error sendData(char* data, int size) {
+        Error sendData(std::vector<uint8_t> data) {
             if (!Connected) {
                 return Error::noConnected;
             }
-            char* p = data;							// 数据由前向后发送,发送后指针右移
-            int len = size;							// 剩余要发送数据的大小
+            char* p = (char*)data.data();							// 数据由前向后发送,发送后指针右移
+            int len = static_cast<int>(data.size());				// 剩余要发送数据的大小
+            while (len > 0) {
+                int sendcount = ::send(_sockfd, p, len, 0);
+                if (sendcount < 0) {				// 等于0 表示剩余缓冲区空间不足,要等待协议将数据发送完
+                    return Error::sendFailed;
+                }
+                len -= sendcount;
+                p += sendcount;
+            }
+            return Error::noError;
+        };
+
+        Error sendData(const std::string& data) {
+            if (!Connected) {
+                return Error::noConnected;
+            }
+            char* p = (char*)data.data();							// 数据由前向后发送,发送后指针右移
+            int len = static_cast<int>(data.size());				// 剩余要发送数据的大小
             while (len > 0) {
                 int sendcount = ::send(_sockfd, p, len, 0);
                 if (sendcount < 0) {				// 等于0 表示剩余缓冲区空间不足,要等待协议将数据发送完
