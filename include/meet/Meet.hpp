@@ -441,6 +441,10 @@ namespace meet
          * @brief 关闭套接字连接
         */
         void close() {
+            if (buffer) {
+                delete[] buffer;
+                buffer = nullptr;
+            }
             Connected = false;
             if (_sockfd) {
                 shutdown(_sockfd, SD_BOTH);
@@ -509,6 +513,12 @@ namespace meet
             if ((_sockfd = socket((ADDRESS_FAMILY)ip.IPFamily, SOCK_STREAM, IPPROTO_TCP)) == SOCKET_ERROR) {
                 return Error::socketError;
             }
+            if (buffer) {
+                delete[] buffer;
+                buffer = nullptr;
+            }
+            buffer = new char[_recvBuffSize];
+            memset(buffer, '\0', _recvBuffSize);
             
             // 这里没有判断而直接使用 sockaddr_in6 是因为 sockaddr能装得下v4 但装不下v6 故直接使用v6(虽然在使用v4连接的时候会浪费一点内存)
             //sockaddr_in6 saddr{};
@@ -665,8 +675,8 @@ namespace meet
         };
 
         /**
-         * @brief 注册回调事件 / Register callback events
-         * @param recvDataEvent
+         * @brief 注册接收数据的回调事件 / Register callback events
+         * @param recvDataEvent 回调函数
         */
         void onRecvData(RecvDataEvent recvDataEvent) {
             _recvDataEvent = recvDataEvent;
@@ -681,7 +691,7 @@ namespace meet
         }
 
         /**
-         * @brief 注册回调事件 / Register callback events
+         * @brief 注册接收数据出错回调事件 / Register callback events
          * @param recvErrorEvent
         */
         void onRecvError(RecvErrorEvent recvErrorEvent) {
@@ -691,49 +701,53 @@ namespace meet
     public:
 
         /**
-         * @brief 线程函数,开启一个循环接受网络包,并对相关状态进行分析 / Thread function, responsible for receiving network packets, and classify and analyze the processing
-         * @param c TCP客户端 / TCPClient Instance
-        */
-        void startRecv() {
-            if (Connected) {
-
-                char* buffer = new char[_recvBuffSize];
-                //char buffer[RecvBuffSize];
-                memset(buffer, '\0', _recvBuffSize);
-                while (Connected) {
-                    int recvbytecount;
-                    if ((recvbytecount = recv(_sockfd, buffer, _recvBuffSize - 1, 0)) <= 0) {
-                        //Return 0 Network Outage
-                        if (recvbytecount == 0) {
-                            Connected = false;
-                            if (_disConnectEvent != NULL) {
-                                _disConnectEvent();
-                            }
-                            break;
-                        }
-
+         * @brief 由用户循环调用 接收服务端发来的数据 / Called by the user loop to receive data sent by the server
+         * @return 返回是否拉到了数据 , >0 拉到了数据, 0 没有数据(应当休眠一定时间后继续循环)， -1 断开连接， -2 未连接 -3 未初始化buffer, 其他位置问题 -999
+         *         -4 ECONNRESET 连接被重置，对端RST, -5 超时, -6 无效的socket
+         */
+        int run_once() {
+            if (Connected && buffer) {
+                int recvbytecount;
+                if ((recvbytecount = recv(_sockfd, buffer, _recvBuffSize - 1, 0)) <= 0) {
+                    if (recvbytecount == SOCKET_ERROR) {
                         //阻塞模式
                         if (_blockingMode) {
-                            if (recvbytecount == SOCKET_ERROR) {
-                                if (_recvErrorEvent != NULL) {
-                                    _recvErrorEvent(recvbytecount);
-                                }
+                            if (_recvErrorEvent != NULL) {
+                                _recvErrorEvent(recvbytecount);
                             }
                         }
-
-                    }//if ((recvbytecount = recv(sockfd, buffer, sizeof(buffer), 0)) <= 0)
-
-                    //接收数据 触发回调
-                    else {
-                        if (_recvDataEvent != NULL) {
-                            buffer[recvbytecount] = '\0';
-                            _recvDataEvent(recvbytecount, buffer);
+                        else {
+                            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                                return 0;
+                            }
+                            else if (errno == ECONNRESET) {
+                                return -4;
+                            }
+                            else if (errno == ETIMEDOUT) {
+                                return -5;
+                            }
+                            else if (errno == EBADF || errno == ENOTSOCK) {
+                                return -6;
+                            }
+                            else if (errno == EINTR) {
+                                // 应当重试一次
+                            }
                         }
                     }
-                }//while (connected)
-                delete[] buffer;
-            }//if(!connected)
-        };//void startRecv()
+
+                    //Return 0 Network Outage
+                    if (recvbytecount == 0) {
+                        Connected = false;
+                        if (_disConnectEvent != NULL) {
+                            _disConnectEvent();
+                        }
+                        return -1;
+                    }
+
+                }//if ((recvbytecount = recv(sockfd, buffer, sizeof(buffer), 0)) <= 0)
+
+                //接收数据 触发回调
+                else {
                     if (_recvDataEvent != NULL) {
                         buffer[recvbytecount] = '\0';
                         _recvDataEvent(recvbytecount, buffer);
@@ -748,6 +762,14 @@ namespace meet
                         std::vector<uint8_t> vec = std::vector<uint8_t>(buffer, buffer + recvbytecount);
                         _recvDataCEvent(vec);
                     }
+                    return recvbytecount;
+                }
+            }
+            if (!Connected) return -2;
+            else if (!buffer) return -3;
+            return -999;
+        }
+
 
     public:
 
@@ -764,7 +786,7 @@ namespace meet
         std::thread _recv_thread;
 
         int _recvBuffSize = 1024;
-
+        char* buffer = nullptr;
         /**
          * @brief 断开连接时触发的事件
         */
