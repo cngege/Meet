@@ -508,27 +508,6 @@ namespace meet
                 return Error::socketError;
             }
             
-            //if (ip.IPFamily == Family::IPV4) {
-            //	memset(&_sock4, 0, sizeof(_sock4));
-            //	_sock4.sin_family = (ADDRESS_FAMILY)ip.IPFamily;
-            //	_sock4.sin_port = htons(port);
-            //	_sock4.sin_addr = ip.InAddr;
-            //	if (::connect(_sockfd, (struct sockaddr*)&_sock4, sizeof(_sock4)) == INVALID_SOCKET) {
-            //		closesocket(_sockfd);
-            //		return Error::connectFailed;
-            //	}
-            //}
-            //else {
-            //	memset(&_sock6, 0, sizeof(_sock6));
-            //	_sock6.sin6_family = (ADDRESS_FAMILY)ip.IPFamily;
-            //	_sock6.sin6_port = htons(port);
-            //	_sock6.sin6_addr = ip.InAddr6;
-            //	if (::connect(_sockfd, (struct sockaddr*)&_sock6, sizeof(_sock6)) == INVALID_SOCKET) {
-            //		closesocket(_sockfd);
-            //		return Error::connectFailed;
-            //	}
-            //}
-            
             // 这里没有判断而直接使用 sockaddr_in6 是因为 sockaddr能装得下v4 但装不下v6 故直接使用v6(虽然在使用v4连接的时候会浪费一点内存)
             //sockaddr_in6 saddr{};
             // 这里使用 sockaddr_storage 而不是使用 sockaddr ，因为前者的结构大小足够容纳IPv4 和 IPv6
