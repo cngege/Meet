@@ -420,6 +420,8 @@ namespace meet
          * @param const char* 接收到的数据
         */
         using RecvDataEvent = std::function<void(ULONG64, const char*)>;
+        using RecvDataBEvent = std::function<void(std::string&)>;
+        using RecvDataCEvent = std::function<void(std::vector<uint8_t>&)>;
 
         /**
          * @brief 接收消息时错误回调
